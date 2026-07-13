@@ -166,6 +166,7 @@ td.sup{max-width:130px;white-space:normal;text-align:left;font-weight:600}
 <div class="layout">
 <aside class="sidebar">
   <div class="sg">核心看板</div>
+  <a onclick="showPage('overview',this)" id="navOverview" style="display:none;">📊 汇总看板</a>
   <a onclick="showPage('regions',this)" id="navRegions" class="active">📋 各区明细</a>
   <div class="sg">专题分析</div>
   <a onclick="showPage('cost',this)" id="navCost">💰 成本分析</a>
@@ -349,15 +350,17 @@ function applyPermissions(){
   const userLabel=document.getElementById('userLabel');
   if(userLabel)userLabel.textContent='👤 '+auth.label+' | © 2026 GUS';
 
-  // 管理员显示全部菜单 + 管理入口
+  // 管理员显示全部菜单 + 管理入口 + 汇总看板
   if(auth.role==='admin'){
+    document.getElementById('navOverview').style.display='flex';
     document.getElementById('navAdminSep').style.display='block';
     document.getElementById('navAdmin').style.display='flex';
     D._filterRegions=null; // 管理员看全部
     return;
   }
 
-  // 普通 viewer：只显示允许的大区
+  // 普通 viewer：隐藏汇总看板，只显示允许的大区
+  document.getElementById('navOverview').style.display='none';
   if(auth.regions&&auth.regions!=='*'){
     const allowedRegions=auth.regions.split(',').map(s=>s.trim());
     D._filterRegions=allowedRegions;
