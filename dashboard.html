@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>GUS 劳务供应商管理看板</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" onerror="document.body.innerHTML='<div style=\"padding:40px;text-align:center;color:#dc2626;\"><h2>Chart.js 加载失败</h2><p>请检查网络连接，CDN (jsdelivr.net) 可能不可达</p></div>'"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:#f1f5f9;color:#1e293b;min-height:100vh;display:flex;flex-direction:column}
+
+/* ── Top Bar ── */
+.topbar{background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);color:#fff;padding:0 28px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 16px rgba(15,23,42,0.15);position:fixed;top:0;left:0;right:0;z-index:200;height:52px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.topbar h1{font-size:17px;font-weight:700;letter-spacing:.3px;display:flex;align-items:center;gap:8px}
+.topbar h1::before{content:'📊';font-size:18px}
+.topbar .right{font-size:10px;color:rgba(255,255,255,0.45);font-weight:500;letter-spacing:.3px}
+
+/* ── Layout ── */
+.layout{display:flex;margin-top:52px;min-height:calc(100vh - 52px)}
+.sidebar{width:200px;background:#fff;border-right:1px solid #e8ecf1;padding:16px 0;flex-shrink:0;position:fixed;top:52px;left:0;bottom:0;z-index:150;overflow-y:auto;box-shadow:2px 0 12px rgba(0,0,0,0.03)}
+.sidebar .sg{font-size:9px;text-transform:uppercase;color:#94a3b8;padding:12px 20px 6px;letter-spacing:1.2px;font-weight:700}
+.sidebar a{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:12.5px;color:#475569;cursor:pointer;text-decoration:none;font-weight:500;border-left:3px solid transparent;transition:all .2s ease;margin:1px 0;border-radius:0 6px 6px 0;margin-right:8px}
+.sidebar a:hover{color:#2563eb;background:rgba(37,99,235,0.05);border-left-color:#93c5fd}
+.sidebar a.active{color:#1d4ed8;font-weight:700;background:linear-gradient(90deg,rgba(37,99,235,0.08),transparent);border-left-color:#2563eb}
+.sidebar a .dot{margin-left:auto;width:7px;height:7px;border-radius:50%;background:#ef4444;box-shadow:0 0 6px rgba(239,68,68,0.4);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.sidebar-footer{padding:14px 20px;font-size:9px;color:#cbd5e1;border-top:1px solid #f1f5f9;margin-top:auto}
+
+.main{margin-left:200px;flex:1;padding:20px 28px 32px;max-width:calc(100vw - 200px)}
+.page{display:none}
+.page.active{display:block;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Stat Cards ── */
+.stat-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+.stat-card{background:#fff;border:1px solid #e8ecf1;border-radius:10px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,0.04);transition:all .25s ease;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:transparent;transition:background .25s ease;border-radius:10px 10px 0 0}
+.stat-card:hover{border-color:#cbd5e1;box-shadow:0 6px 20px rgba(0,0,0,0.06);transform:translateY(-2px)}
+.stat-card.p::before{background:#3b82f6}
+.stat-card.s::before{background:#10b981}
+.stat-card.d::before{background:#ef4444}
+.stat-card.w::before{background:#f59e0b}
+.stat-card .lbl{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;font-weight:600}
+.stat-card .val{font-size:28px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat-card .sub{font-size:10px;color:#94a3b8;margin-top:4px;line-height:1.4}
+.stat-card.p .val{color:#2563eb}
+.stat-card.s .val{color:#059669}
+.stat-card.d .val{color:#dc2626}
+.stat-card.w .val{color:#d97706}
+
+/* ── Charts ── */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.chart-card{background:#fff;border:1px solid #e8ecf1;border-radius:10px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,0.04);transition:box-shadow .2s}
+.chart-card:hover{box-shadow:0 4px 14px rgba(0,0,0,0.06)}
+.chart-card h3{font-size:12px;font-weight:700;margin-bottom:10px;color:#0f172a;letter-spacing:.2px;display:flex;align-items:center;gap:6px}
+.chart-card h3::before{content:'';width:3px;height:14px;background:#3b82f6;border-radius:2px;display:inline-block}
+.chart-wrap{height:290px}
+
+/* ── Tables ── */
+.table-card{background:#fff;border:1px solid #e8ecf1;border-radius:10px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,0.04);overflow:hidden}
+.table-card>h3{padding:12px 18px;font-size:12px;font-weight:700;border-bottom:1px solid #e8ecf1;background:#f8fafc;display:flex;align-items:center;gap:6px;letter-spacing:.2px}
+.table-card>h3::before{content:'';width:3px;height:14px;background:#8b5cf6;border-radius:2px;display:inline-block}
+.filter-bar{display:flex;gap:10px;padding:10px 18px;border-bottom:1px solid #e8ecf1;flex-wrap:wrap;align-items:center;background:#fafbfc}
+.filter-bar select{padding:6px 28px 6px 12px;border:1px solid #dde1e7;border-radius:6px;font-size:11px;background:#fff url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E\") no-repeat right 10px center;min-width:120px;cursor:pointer;appearance:none;-webkit-appearance:none;font-weight:500;color:#334155;transition:all .2s}
+.filter-bar select:hover{border-color:#94a3b8}
+.filter-bar select:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,0.1)}
+.filter-bar .fl{font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:600;letter-spacing:.5px}
+.table-wrap{overflow-x:auto;max-height:480px}
+table{width:max-content;min-width:100%;border-collapse:collapse;font-size:11px}
+th{background:#f1f5f9;padding:9px 8px;text-align:center;font-weight:600;color:#475569;white-space:nowrap;border-bottom:2px solid #e2e8f0;font-size:10px;position:sticky;top:0;z-index:5;letter-spacing:.2px}
+td{padding:8px 8px;border-bottom:1px solid #f1f5f9;white-space:nowrap;text-align:center;font-size:11px;color:#334155}
+tr:hover td{background:rgba(59,130,246,0.03)}
+td.l{text-align:left}
+td.r{text-align:right;font-variant-numeric:tabular-nums}
+td.note{font-size:10px;color:#64748b;max-width:170px;white-space:normal;text-align:left;line-height:1.5}
+td.wrh{max-width:80px;white-space:normal;text-align:left}
+td.sup{max-width:130px;white-space:normal;text-align:left;font-weight:600}
+
+/* ── Badges ── */
+.badge{display:inline-block;padding:2px 8px;border-radius:5px;font-size:9.5px;font-weight:700;letter-spacing:.3px;line-height:1.4}
+.badge-A{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0}
+.badge-B{background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe}
+.badge-C{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
+.badge-D{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
+.shi{color:#059669;font-weight:700}
+.smd{color:#2563eb;font-weight:600}
+.slo{color:#dc2626;font-weight:700}
+.nc{color:#d97706;font-weight:700}
+
+/* ── Expandable Rows ── */
+.erow{cursor:pointer}
+.erow:hover td{background:rgba(59,130,246,0.04)!important}
+.det td{background:#fafbfc!important;padding:0;border-bottom:2px solid #e2e8f0}
+.dg{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;margin:10px 16px}
+.di{display:flex;justify-content:space-between;padding:8px 12px;background:#fff;border-radius:6px;font-size:11px;border:1px solid #e8ecf1;transition:border-color .15s}
+.di:hover{border-color:#cbd5e1}
+.di .dn{color:#475569;font-weight:500}
+.di .dv{color:#dc2626;font-weight:700}
+.di .dv.ok{color:#059669}
+.ded{color:#b45309;font-weight:600;margin:0 16px 6px;font-size:10.5px;line-height:1.5}
+
+/* ── Noncompliant Cards ── */
+.cc{background:#fff;border:1px solid #e8ecf1;border-radius:10px;padding:16px 18px;margin-bottom:10px;display:flex;gap:14px;box-shadow:0 1px 4px rgba(0,0,0,0.03);transition:all .2s;border-left:3px solid #f59e0b}
+.cc:hover{box-shadow:0 4px 14px rgba(0,0,0,0.06);border-left-color:#ef4444}
+.cc .ci{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#fef3c7,#fde68a);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.cc .ct{flex:1}
+.cc .cn{font-weight:700;font-size:12.5px;margin-bottom:4px;color:#0f172a}
+.cc .cd{font-size:10.5px;color:#475569;line-height:1.6;margin-bottom:4px}
+.cc .ca{font-size:10.5px;color:#d97706;font-weight:700;margin-top:6px;background:#fffbeb;padding:6px 10px;border-radius:6px;display:inline-block}
+
+/* ── Strategy Tables ── */
+.stab{width:100%;border-collapse:collapse;font-size:11px}
+.stab th{background:#f1f5f9;padding:10px 12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;font-size:10px;position:static;letter-spacing:.2px}
+.stab td{padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:11px;color:#334155}
+
+/* ── Strategy Cards ── */
+.stg-card{background:#fff;border:1px solid #e8ecf1;border-radius:10px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,0.04);transition:box-shadow .2s}
+.stg-card:hover{box-shadow:0 4px 14px rgba(0,0,0,0.06)}
+.stg-card h3{font-size:12px;font-weight:700;margin-bottom:10px;color:#0f172a;letter-spacing:.2px;display:flex;align-items:center;gap:6px}
+.stg-card h3::before{content:'';width:3px;height:14px;background:#8b5cf6;border-radius:2px;display:inline-block}
+.stg-card p,.stg-card li{font-size:11px;color:#475569;line-height:1.7;margin-bottom:3px}
+.stg-card ul{padding-left:18px}
+.stg-card ul li{margin-bottom:5px}
+.stg-card ul li::marker{color:#8b5cf6}
+.stg-card .note{font-size:10px;color:#94a3b8;margin-top:6px;line-height:1.6}
+
+/* ── Region Tabs ── */
+.region-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.region-tab{padding:7px 16px;border-radius:20px;border:1.5px solid #e2e8f0;font-size:11px;cursor:pointer;color:#475569;background:#fff;font-weight:600;transition:all .2s ease;letter-spacing:.2px}
+.region-tab:hover{border-color:#93c5fd;color:#2563eb;background:#f8faff;box-shadow:0 2px 8px rgba(37,99,235,0.08)}
+.region-tab.active{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border-color:#2563eb;font-weight:700;box-shadow:0 2px 10px rgba(37,99,235,0.25)}
+
+/* ── Mini Stats ── */
+.stat-mini{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.stat-mini .sm{background:#fff;border-radius:8px;padding:12px 14px;text-align:center;border:1px solid #e8ecf1;box-shadow:0 1px 3px rgba(0,0,0,0.03);transition:all .2s}
+.stat-mini .sm:hover{border-color:#cbd5e1;box-shadow:0 3px 10px rgba(0,0,0,0.05);transform:translateY(-1px)}
+.stat-mini .sm .v{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.stat-mini .sm .l{font-size:10px;color:#94a3b8;margin-top:3px;font-weight:500;letter-spacing:.2px}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#94a3b8}
+
+@media(max-width:1200px){.charts-row{grid-template-columns:1fr}.stat-cards{grid-template-columns:1fr 1fr}}
+@media(max-width:768px){.stat-cards{grid-template-columns:1fr}.sidebar{width:150px}.main{margin-left:150px;max-width:calc(100vw-150px)}}
+@media print{
+  .sidebar,.topbar .right button,#crossChart,#crossAnalysis{display:none!important}
+  .topbar{position:static;height:auto;padding:8px 28px;background:#0f172a!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .layout{margin-top:0}
+  .main{margin-left:0!important;max-width:100%!important;padding:12px}
+  .page{display:block!important;page-break-inside:avoid;margin-bottom:20px}
+  .table-wrap{max-height:none!important;overflow:visible!important}
+  .charts-row{grid-template-columns:1fr 1fr}
+  .chart-wrap{height:240px}
+  canvas{max-width:100%}
+  @page{size:A4 landscape;margin:8mm}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar"><h1>GUS 劳务供应商管理看板</h1><div class="right"><button onclick="exportHTML()" style="padding:6px 14px;border:1px solid rgba(255,255,255,0.3);border-radius:6px;background:rgba(255,255,255,0.1);color:#fff;font-size:11px;cursor:pointer;font-weight:600;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">📄 导出HTML</button></div></div>
+
+<div class="layout">
+<aside class="sidebar">
+  <div class="sg">核心看板</div>
+  <a onclick="showPage('regions',this)" id="navRegions" class="active">📋 各区明细</a>
+  <div class="sg">专题分析</div>
+  <a onclick="showPage('cost',this)" id="navCost">💰 成本分析</a>
+  <a onclick="showPage('compliance',this)" id="navCompliance">🛡️ 合规分析<span class="dot"></span></a>
+  <a onclick="showPage('risk',this)" id="navRisk">⚠️ 风险预警<span class="dot"></span></a>
+  <div class="sg" id="navAdminSep" style="display:none;">系统管理</div>
+  <a onclick="window.location.href='admin.html'" id="navAdmin" style="display:none;">⚙️ 账号管理</a>
+  <a onclick="doLogout()" style="color:#dc2626;">🚪 退出登录</a>
+  <div class="sidebar-footer" id="userLabel">© 2026 GUS</div>
+</aside>
+
+<main class="main">
+
+<!-- ===== 汇总看板 ===== -->
+<div class="page" id="pg-overview" style="display:none;">
+<div class="stat-cards">
+  <div class="stat-card p"><div class="lbl">日均用工总人数</div><div class="val" id="v1">-</div><div class="sub" id="v1s">全美仓库劳务工</div></div>
+  <div class="stat-card"><div class="lbl">日均用工总人次</div><div class="val" id="v2">-</div><div class="sub">总工时÷22÷8</div></div>
+  <div class="stat-card"><div class="lbl">总工时</div><div class="val" id="v3">-</div><div class="sub">小时</div></div>
+  <div class="stat-card"><div class="lbl">总成本</div><div class="val" id="v4">-</div><div class="sub">计时+计件</div></div>
+</div>
+<div class="stat-cards">
+  <div class="stat-card"><div class="lbl">供应商总数（去重）</div><div class="val" id="v5">-</div><div class="sub" id="v5s"></div></div>
+  <div class="stat-card s"><div class="lbl">A级供应商数</div><div class="val" id="v6">-</div><div class="sub" id="v6s"></div><div class="sub" id="v6pct" style="color:#059669;font-weight:600;"></div></div>
+  <div class="stat-card d"><div class="lbl">D级供应商数</div><div class="val" id="v7">-</div><div class="sub" id="v7s"></div><div class="sub" id="v7pct" style="color:#dc2626;font-weight:600;"></div></div>
+  <div class="stat-card w"><div class="lbl">COI不合规供应商</div><div class="val" id="v8">-</div><div class="sub" id="v8s"></div><div class="sub" id="v8pct" style="color:#d97706;font-weight:600;"></div></div>
+</div>
+
+<div class="charts-row">
+  <div class="chart-card"><h3>各区域用工成本 · 总工时趋势</h3><div class="chart-wrap"><canvas id="chCost"></canvas></div></div>
+  <div class="chart-card"><h3>各区域日均人数 · 供应商合规分布</h3><div class="chart-wrap"><canvas id="chPeople"></canvas></div></div>
+</div>
+
+<div class="table-card"><h3>供应商数据汇总</h3>
+<div class="filter-bar">
+  <span class="fl">大区</span><select id="fReg" onchange="rst()"><option value="">全部大区</option></select>
+  <span class="fl">等级</span><select id="fGrd" onchange="rst()"><option value="">全部</option><option value="A">A级</option><option value="B">B级</option><option value="C">C级</option><option value="D">D级</option></select>
+  <span class="fl">合规</span><select id="fCmp" onchange="rst()"><option value="">全部</option><option value="合规">合规</option><option value="不合规">不合规</option></select>
+</div>
+<div class="table-wrap"><table><thead><tr><th>评级</th><th>合规</th><th>大区</th><th>供应商</th><th>仓库</th><th>日均人数</th><th>人数占比%</th><th>时薪</th><th>Markup</th><th>结算价</th><th>总分</th><th>得分分析</th></tr></thead><tbody id="stb"></tbody></table></div>
+</div>
+
+<div class="table-card"><h3>同供应商跨区域表现对比 · 点击供应商查看图表</h3><div class="table-wrap" style="max-height:300px;"><table><thead><tr><th>供应商</th><th>大区</th><th>评级</th><th>日均人数</th><th>总分</th><th>时薪</th><th>Markup</th><th>结算价</th></tr></thead><tbody id="crossTb"></tbody></table></div><div id="crossChart" style="display:none;padding:8px 14px;border-top:1px solid #dde1e7;"><div style="display:flex;gap:12px;align-items:flex-start;"><div class="chart-wrap" style="flex:1;height:240px;"><canvas id="chCross"></canvas></div><div id="crossAnalysis" style="width:240px;flex-shrink:0;font-size:11px;color:#475569;line-height:1.7;"></div></div></div></div>
+</div>
+
+<!-- ===== 各区明细（按区域子界面） ===== -->
+<div class="page active" id="pg-regions">
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+<div class="region-tabs" id="regionTabs" style="margin-bottom:0;"></div>
+<button onclick="exportRegionImage()" style="padding:6px 14px;border:1px solid #dde1e7;border-radius:6px;background:#fff;color:#475569;font-size:11px;cursor:pointer;font-weight:600;transition:all .2s;white-space:nowrap;" onmouseover="this.style.borderColor='#3b82f6';this.style.color='#2563eb'" onmouseout="this.style.borderColor='#dde1e7';this.style.color='#475569'">📸 导出图片</button>
+</div>
+<div id="regionContent"></div>
+</div>
+
+<!-- ===== 成本分析 ===== -->
+<div class="page" id="pg-cost">
+<div class="charts-row">
+  <div class="chart-card"><h3>各区域成本与用工量</h3><div class="chart-wrap" style="height:310px;"><canvas id="chCost2"></canvas></div></div>
+  <div class="chart-card"><h3>各区域利润空间对比</h3><div class="chart-wrap" style="height:310px;"><canvas id="chProfit"></canvas></div></div>
+</div>
+
+<div class="stg-card"><h3>利润空间估算（按州实际政策）</h3>
+<p class="note">利润空间 = 结算价 − 时薪 − 雇主成本（WC保险+雇主税+管理费，按各州实际费率）</p>
+<p class="note" style="font-size:9.5px;line-height:1.5;">
+雇主成本=FICA 7.65%(SS 6.2%+Medicare 1.45%)+FUTA 0.6%+SUTA 2-3%+WC 2-4%+管理运营 2-3%。FL≈15% | IL/OH≈16% | TX≈14% | CA≈18% | CO≈16% | WA≈17% | NJ/NY≈17% | GA/NC≈15%
+</p>
+<div class="table-wrap" style="max-height:300px;"><table><thead><tr><th>大区</th><th>日均人数</th><th>平均时薪</th><th>平均结算价</th><th>Markup</th><th>雇主成本率</th><th>雇主成本</th><th>利润/h</th><th>利润率</th><th>降价建议</th></tr></thead><tbody id="profitTb"></tbody></table></div></div>
+
+<div class="stg-card"><h3>阶梯降价对照表（用工量 × 利润率 → 降价比例）</h3>
+<p class="note"><b>公式：降价% = 用工量阶梯 × 利润率区间</b>。下降比例每次2%：≥200人起点降8%，每降一档减2%。年节省=月成本×12×降价%。</p>
+<div class="table-wrap" style="max-height:300px;"><table class="stab" id="ladderMatrixTb"><thead><tr><th>用量阶梯</th><th>利润率 ≥20%</th><th>10%-20%</th><th>5%-10%</th><th>0%-5%</th><th>&lt;0%（需核查）</th><th>供应商数</th><th>当月成本</th><th>预计年节省</th></tr></thead><tbody id="ladderMatrixBody"></tbody></table></div>
+</div>
+
+<div class="stg-card"><h3>供应商成本结构 &amp; 谈价策略明细</h3>
+<p class="note">成本结构：结算价 = 时薪 + 雇主成本(WC+税+管理) + 测算利润。同一供应商不同大区/仓库的结算价不同，谈价策略也不同。降价比例 = 用工量阶梯 × 利润率矩阵。</p>
+<div class="table-wrap" style="max-height:520px;"><table><thead><tr><th>#</th><th>供应商</th><th>大区</th><th>仓库</th><th>日均人数</th><th>结算价</th><th>时薪</th><th>雇主成本</th><th>测算利润/h</th><th>测算利润率</th><th>降价%</th><th>当月成本</th><th>预计年节省</th><th>谈价逻辑</th></tr></thead><tbody id="negoTb"></tbody></table></div></div>
+</div>
+
+<!-- ===== 合规分析 ===== -->
+<div class="page" id="pg-compliance">
+<div class="charts-row">
+  <div class="chart-card"><h3>COI合规状态分布</h3><div class="chart-wrap" style="height:260px;"><canvas id="chCOI"></canvas></div></div>
+  <div class="chart-card"><h3>各区域不合规供应商分布</h3><div class="chart-wrap" style="height:260px;"><canvas id="chNonCompByRegion"></canvas></div></div>
+</div>
+
+<div class="stg-card"><h3>合规管理策略</h3>
+<ul>
+  <li><strong>月度第三方COI核查：</strong>引入保险验证平台（如邦宁）每月核查全部供应商COI状态</li>
+  <li><strong>到期前30天预警：</strong>自动提醒供应商更新COI</li>
+  <li><strong>新供应商准入：</strong>COI验证不通过不予准入</li>
+  <li><strong>不合规限期整改：</strong>发现后2周内完成整改，暂停新业务分配直至合规</li>
+</ul></div>
+
+<div class="stg-card"><h3>不合规供应商清单</h3><div id="noncompliantCards"></div></div>
+
+<div class="table-card"><h3>保险合规进度</h3><div class="table-wrap" style="max-height:380px;"><table><thead><tr><th>区域</th><th>供应商</th><th>存在问题</th><th>反馈进度</th><th>区长知悉</th><th>责任人</th><th>DDL</th></tr></thead><tbody id="insTb"></tbody></table></div></div>
+</div>
+
+<!-- ===== 风险预警 ===== -->
+<div class="page" id="pg-risk">
+<div class="stat-cards" style="grid-template-columns:1fr 1fr 1fr;">
+  <div class="stat-card d" id="cardLowScore"><div class="lbl">高风险(&lt;50分)</div><div class="val">-</div></div>
+  <div class="stat-card w" id="cardDeduction"><div class="lbl">有扣分记录</div><div class="val">-</div></div>
+  <div class="stat-card" id="accidentCard"><div class="lbl">库内安全事故</div><div class="val">-</div></div>
+</div>
+
+<div class="charts-row">
+  <div class="chart-card"><h3>各等级供应商分布</h3><div class="chart-wrap" style="height:260px;"><canvas id="chGrade"></canvas></div></div>
+  <div class="chart-card"><h3>供应商得分分布</h3><div class="chart-wrap" style="height:260px;"><canvas id="chScoreDist"></canvas></div></div>
+</div>
+
+<div class="stg-card"><h3>高风险供应商清单（总分 &lt; 50）</h3><div class="table-wrap" style="max-height:400px;"><table><thead><tr><th>大区</th><th>仓库</th><th>供应商</th><th>总分</th><th>扣分</th><th>扣分明细</th><th>建议</th></tr></thead><tbody id="highRiskTb"></tbody></table></div></div>
+
+<div class="stg-card"><h3>风险应对策略</h3>
+<ul>
+  <li>高风险供应商列入重点监控名单，月度跟踪</li>
+  <li>扣分项目建立专项改进计划，明确整改时限</li>
+  <li>安全事故零容忍，暂停新增派遣直至整改完成</li>
+  <li><strong>所有整改方案需与区域区长确认，业务优先</strong></li>
+</ul></div>
+
+<div class="stg-card"><h3>风险监控方向</h3>
+<ul>
+  <li>建立评分预警线（总分&lt;50自动预警）</li>
+  <li>定期回顾扣分趋势，识别系统性问题</li>
+  <li>整改进度由区域区长和HRBP联合跟踪</li>
+</ul></div>
+</div>
+
+</main>
+</div>
+
+<script>
+// ─── 权限校验 ───
+(function(){
+  const authStr=sessionStorage.getItem('gus_auth');
+  if(!authStr){
+    window.location.href='login.html';
+    return;
+  }
+  try{
+    window._auth=JSON.parse(authStr);
+  }catch(e){
+    window.location.href='login.html';
+    return;
+  }
+  // 超时自动退出（8小时）
+  const loginTime=new Date(window._auth.loginTime).getTime();
+  if(Date.now()-loginTime>8*3600*1000){
+    sessionStorage.removeItem('gus_auth');
+    window.location.href='login.html';
+    return;
+  }
+})();
+
+const FM=n=>n.toLocaleString('en-US');
+const FD=n=>'$'+n.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+let D={};
+console.log('Loading dashboard...');
+fetch('dashboard_data.json')
+  .then(r=>{console.log('Fetch status:',r.status);if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+  .then(d=>{console.log('Data loaded, keys:',Object.keys(d).join(', '));D=d;init();})
+  .catch(e=>{console.error('Load failed:',e);document.body.innerHTML='<div style=\"padding:40px;text-align:center;color:#dc2626;\"><h2>数据加载失败</h2><p>'+e.message+'</p><p>请确认 dashboard_data.json 文件存在且HTTP服务器正常运行</p></div>';});
+
+function init(){
+  // 权限应用：设置用户标签、控制菜单可见
+  applyPermissions();
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',()=>doInit());}
+  else{doInit();}
+}
+function doInit(){
+  renderKPIs(); renderCharts(); renderSupplierTable(); renderCrossRegion();
+  renderRegionDetail(); renderCostAnalysis(); renderInsurance(); renderRisk();
+  populateFilters();
+}
+
+function applyPermissions(){
+  const auth=window._auth;
+  if(!auth)return;
+  // 设置用户标签
+  const userLabel=document.getElementById('userLabel');
+  if(userLabel)userLabel.textContent='👤 '+auth.label+' | © 2026 GUS';
+
+  // 管理员显示全部菜单 + 管理入口
+  if(auth.role==='admin'){
+    document.getElementById('navAdminSep').style.display='block';
+    document.getElementById('navAdmin').style.display='flex';
+    D._filterRegions=null; // 管理员看全部
+    return;
+  }
+
+  // 普通 viewer：只显示允许的大区
+  if(auth.regions&&auth.regions!=='*'){
+    const allowedRegions=auth.regions.split(',').map(s=>s.trim());
+    D._filterRegions=allowedRegions;
+    // 过滤数据
+    filterDataByRegions(allowedRegions);
+    // 隐藏跨区域对比和专题分析（只限本区）
+    document.getElementById('navCost').style.display='none';
+    document.getElementById('navCompliance').style.display='none';
+    document.getElementById('navRisk').style.display='none';
+  }
+}
+
+function filterDataByRegions(allowedRegions){
+  // 过滤 supplier_table
+  D.supplier_table=D.supplier_table.filter(r=>allowedRegions.includes(r['大区']));
+  // 过滤 cost_chart
+  D.cost_chart=D.cost_chart.filter(r=>allowedRegions.includes(r.region));
+  // 过滤 people_supplier_chart
+  D.people_supplier_chart=D.people_supplier_chart.filter(r=>allowedRegions.includes(r.region));
+  // 过滤 cross_region
+  D.cross_region=D.cross_region.filter(r=>allowedRegions.includes(r['大区']));
+  // 过滤 detail_by_region（只保留允许的大区）
+  const filteredDetail={};
+  for(const region of allowedRegions){
+    if(D.detail_by_region[region])filteredDetail[region]=D.detail_by_region[region];
+    if(D.detail_by_region_jun&&D.detail_by_region_jun[region])filteredDetail[region+'_jun']=D.detail_by_region_jun[region];
+  }
+  D.detail_by_region=filteredDetail;
+  D.regions=allowedRegions;
+  // 过滤 supplier_negotiation
+  if(D.supplier_negotiation)D.supplier_negotiation=D.supplier_negotiation.filter(r=>allowedRegions.includes(r['大区']));
+  // 过滤 cost_analysis
+  if(D.cost_analysis)D.cost_analysis=D.cost_analysis.filter(r=>allowedRegions.includes(r['大区']));
+  // 过滤 insurance
+  if(D.insurance)D.insurance=D.insurance.filter(r=>allowedRegions.includes(r['区域']));
+  // 过滤 noncompliant_cards
+  if(D.noncompliant_cards)D.noncompliant_cards=D.noncompliant_cards.filter(r=>allowedRegions.includes(r['大区']));
+  // 过滤 high_risk
+  if(D.high_risk)D.high_risk=D.high_risk.filter(r=>allowedRegions.includes(r['大区']));
+  // 过滤 risk_stats accident_list
+  if(D.risk_stats&&D.risk_stats.accident_list)D.risk_stats.accident_list=D.risk_stats.accident_list.filter(r=>allowedRegions.includes(r['大区']));
+  // 过滤 people_supplier_chart_jun
+  if(D.people_supplier_chart_jun)D.people_supplier_chart_jun=D.people_supplier_chart_jun.filter(r=>allowedRegions.includes(r.region));
+  // 过滤 detail_by_region_jun
+  if(D.detail_by_region_jun){
+    const filteredJun={};
+    for(const region of allowedRegions){
+      if(D.detail_by_region_jun[region])filteredJun[region]=D.detail_by_region_jun[region];
+    }
+    D.detail_by_region_jun=filteredJun;
+  }
+}
+
+function doLogout(){
+  sessionStorage.removeItem('gus_auth');
+  window.location.href='login.html';
+}
+function showPage(n,b){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('pg-'+n).classList.add('active');
+  document.querySelectorAll('.sidebar a').forEach(a=>a.classList.remove('active'));
+  b.classList.add('active');
+  if(n==='overview')setTimeout(renderCharts,100);
+  if(n==='cost')setTimeout(renderCostCharts,100);
+  if(n==='compliance')setTimeout(renderComplianceCharts,100);
+  if(n==='risk')setTimeout(renderRiskCharts,100);
+}
+
+// KPI
+function renderKPIs(){
+  const k=D.kpi;
+  document.getElementById('v1').textContent=FM(k.daily_avg_people);
+  document.getElementById('v1s').textContent='计时'+FM(k.daily_avg_people_time)+' + 计件'+FM(k.daily_avg_people_piece)+'人';
+  document.getElementById('v2').textContent=FM(k.daily_avg_trips);
+  document.getElementById('v3').textContent=FM(k.total_hours);
+  document.getElementById('v4').textContent=FD(k.total_cost);
+  document.getElementById('v5').textContent=k.total_supplier_count;
+  document.getElementById('v5s').textContent=k.total_records+'条考核记录';
+  const aParts=k.a_pct.split('/'), dParts=k.d_pct.split('/'), cParts=k.coi_pct.split('/');
+  const aPct=aParts.length===2?Math.round(parseInt(aParts[0])/parseInt(aParts[1])*100):0;
+  const dPct=dParts.length===2?Math.round(parseInt(dParts[0])/parseInt(dParts[1])*100):0;
+  const cPct=cParts.length===2?Math.round(parseInt(cParts[0])/parseInt(cParts[1])*100):0;
+  document.getElementById('v6').textContent=k.a_suppliers; document.getElementById('v6s').textContent=k.a_pct;
+  document.getElementById('v6pct').textContent='占全美'+aPct+'%（不去重）';
+  document.getElementById('v7').textContent=k.d_suppliers; document.getElementById('v7s').textContent=k.d_pct;
+  document.getElementById('v7pct').textContent='占全美'+dPct+'%（不去重）';
+  document.getElementById('v8').textContent=k.coi_noncompliant; document.getElementById('v8s').textContent=k.coi_pct;
+  document.getElementById('v8pct').textContent='占全美'+cPct+'%（去重）';
+}
+
+// Charts
+let c1=null,c2=null;
+function renderCharts(){
+  const d1=D.cost_chart;
+  const ctx1=document.getElementById('chCost'); if(!ctx1||ctx1.clientWidth===0)return;
+  if(c1)c1.destroy(); if(c2)c2.destroy();
+  const totalCostAll=d1.reduce((s,x)=>s+x.total_cost,0);
+  c1=new Chart(ctx1,{type:'bar',data:{
+    labels:d1.map(x=>x.region),
+    datasets:[
+      {label:'计时成本',data:d1.map(x=>Math.round(x.time_cost)),backgroundColor:'#4f7df3',stack:'cost',barPercentage:.7,order:1},
+      {label:'计件成本',data:d1.map(x=>Math.round(x.piece_cost)),backgroundColor:'#a5b4fc',borderRadius:{topLeft:3,topRight:3},stack:'cost',barPercentage:.7,order:1},
+      {label:'总工时',data:d1.map(x=>Math.round(x.total_hours)),type:'line',borderColor:'#10b981',backgroundColor:'rgba(16,185,129,0.06)',fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#10b981',yAxisID:'y1',tension:.3,order:0}
+    ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:12,usePointStyle:true,pointStyleWidth:8}}},
+    tooltip:{callbacks:{footer:function(items){const i=items[0].dataIndex;const pct=totalCostAll>0?(d1[i].total_cost/totalCostAll*100).toFixed(1):0;return '该区域总成本占全美: '+pct+'%';}}},
+    scales:{y:{type:'linear',position:'left',grid:{color:'#f3f4f6'},ticks:{callback:v=>'$'+(v/1e6).toFixed(1)+'M',font:{size:9}}},
+            y1:{type:'linear',position:'right',grid:{display:false},ticks:{callback:v=>FM(v),font:{size:9}}}}}});
+
+  const d2=D.people_supplier_chart;
+  c2=new Chart(document.getElementById('chPeople'),{type:'bar',data:{
+    labels:d2.map(x=>x.region),
+    datasets:[
+      {label:'合规',data:d2.map(x=>x.compliant),backgroundColor:'#10b981',stack:'s',barPercentage:.7,order:1},
+      {label:'不合规',data:d2.map(x=>x.noncompliant),backgroundColor:'#f87171',borderRadius:{topLeft:3,topRight:3},stack:'s',barPercentage:.7,order:1},
+      {label:'日均人数',data:d2.map(x=>Math.round(x.daily_people)),type:'line',borderColor:'#8b5cf6',backgroundColor:'rgba(139,92,246,0.06)',fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#8b5cf6',yAxisID:'y1',tension:.3,order:0}
+    ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:12,usePointStyle:true,pointStyleWidth:8}}},
+    scales:{y:{type:'linear',position:'left',grid:{color:'#f3f4f6'},ticks:{font:{size:9}}},
+            y1:{type:'linear',position:'right',grid:{display:false},ticks:{callback:v=>FM(v),font:{size:9}}}}}});
+}
+
+// Supplier Table
+function renderSupplierTable(data){
+  data=data||D.supplier_table;
+  let h='';
+  data.forEach((r,i)=>{
+    const sc=r['总分']>=80?'shi':r['总分']>=60?'smd':'slo';
+    h+='<tr class="erow" onclick="toggleDet2('+i+')">';
+    h+='<td><span class="badge badge-'+r['等级']+'">'+r['等级']+'级</span></td>';
+    if(r['合规']==='不合规')h+='<td><span class="nc">不合规</span></td>';
+    else h+='<td><span style="color:#059669">合规</span></td>';
+    h+='<td>'+r['大区']+'</td><td>'+r['供应商']+'</td><td>'+r['仓库']+'</td>';
+    h+='<td>'+FM(r['日均使用人数'])+'</td><td>'+r['人数占比'].toFixed(1)+'%</td>';
+    h+='<td>$'+r['时薪'].toFixed(1)+'</td><td>'+r['markup']+'%</td>';
+    h+='<td>$'+r['结算价'].toFixed(1)+'</td><td class="'+sc+'"><strong>'+r['总分']+'</strong></td>';
+    h+='<td class="note">'+r['分析']+'</td></tr>';
+    h+='<tr class="det" id="det2-'+i+'" style="display:none;"><td colspan="12">';
+    h+='<div class="dg">';
+    h+='<div class="di"><span class="dn">报价竞争力</span><span class="dv'+(r['报价竞争力得分']>=60?' ok':'')+'">'+r['报价竞争力得分']+'分</span></div>';
+    h+='<div class="di"><span class="dn">派遣满足率</span><span class="dv'+(r['派遣满足率得分']>=60?' ok':'')+'">'+r['派遣满足率得分']+'分</span></div>';
+    h+='<div class="di"><span class="dn">考勤准确率</span><span class="dv'+(r['考勤准确率得分']>=60?' ok':'')+'">'+r['考勤准确率得分']+'分</span></div>';
+    h+='<div class="di"><span class="dn">人员稳定率</span><span class="dv'+(r['人员稳定率得分']>=60?' ok':'')+'">'+r['人员稳定率得分']+'分</span></div>';
+    h+='</div>';
+    if(r['扣分明细']&&Object.keys(r['扣分明细']).length>0){
+      h+='<div class="ded" style="text-align:left;">扣分项：';
+      Object.entries(r['扣分明细']).forEach(([k,v])=>{h+=k+'('+v+'分) ';});
+      h+='</div>';
+    }
+    if(r['不合规原因'])h+='<div style="padding:2px 14px 8px;color:#dc2626;font-size:10.5px;text-align:left;">不合规：'+r['不合规原因']+'</div>';
+    else h+='<div style="padding-bottom:6px;"></div>';
+    h+='</td></tr>';
+  });
+  document.getElementById('stb').innerHTML=h;
+}
+function toggleDet2(i){const e=document.getElementById('det2-'+i);if(e)e.style.display=e.style.display==='none'?'table-row':'none';}
+function populateFilters(){
+  const regions=[...new Set(D.supplier_table.map(r=>r['大区']))].sort();
+  const sel=document.getElementById('fReg');
+  regions.forEach(r=>{const o=document.createElement('option');o.value=r;o.textContent=r;sel.appendChild(o);});
+}
+function rst(){
+  let d=D.supplier_table;
+  const rg=document.getElementById('fReg').value,gr=document.getElementById('fGrd').value,cp=document.getElementById('fCmp').value;
+  if(rg)d=d.filter(r=>r['大区']===rg);
+  if(gr)d=d.filter(r=>r['等级']===gr);
+  if(cp)d=d.filter(r=>r['合规']===cp);
+  renderSupplierTable(d);
+}
+
+// Cross Region
+let crossChartInst=null;
+function renderCrossRegion(){
+  const grp={};
+  D.cross_region.forEach(r=>{if(!grp[r['供应商']])grp[r['供应商']]=[];grp[r['供应商']].push(r);});
+  let h='';
+  Object.entries(grp).forEach(([s,rows])=>{
+    rows.forEach((r,i)=>{
+      h+='<tr class="erow" onclick="showCrossChart(\''+s+'\',this)" data-supplier="'+s+'">';
+      if(i===0)h+='<td rowspan="'+rows.length+'" style="font-weight:600;cursor:pointer;text-align:center;">'+s+' ▸</td>';
+      h+='<td>'+r['大区']+'</td><td><span class="badge badge-'+r['等级']+'">'+r['等级']+'级</span></td>';
+      h+='<td>'+FM(r['日均使用人数'])+'</td><td>'+r['总分']+'</td>';
+      h+='<td>$'+r['时薪'].toFixed(1)+'</td><td>'+r['markup']+'%</td>';
+      h+='<td>$'+r['结算价'].toFixed(1)+'</td></tr>';
+    });
+  });
+  document.getElementById('crossTb').innerHTML=h;
+  document.getElementById('crossChart').style.display='none';
+}
+function showCrossChart(supplier,el){
+  document.getElementById('crossChart').style.display='block';
+  const rows=D.cross_region.filter(r=>r['供应商']===supplier);
+  const ctx=document.getElementById('chCross');
+  if(crossChartInst)crossChartInst.destroy();
+  crossChartInst=new Chart(ctx,{type:'bar',data:{
+    labels:rows.map(r=>r['大区']),
+    datasets:[
+      {label:'日均人数',data:rows.map(r=>r['日均使用人数']),backgroundColor:'#3b82f6',barPercentage:.6,yAxisID:'y',order:1,borderRadius:{topLeft:3,topRight:3}},
+      {label:'结算价($)',data:rows.map(r=>r['结算价']),type:'line',borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.08)',fill:true,borderWidth:2.5,pointRadius:5,pointBackgroundColor:'#f59e0b',yAxisID:'y1',tension:.3,order:0},
+      {label:'总分',data:rows.map(r=>r['总分']),type:'line',borderColor:'#10b981',backgroundColor:'rgba(16,185,129,0.06)',fill:true,borderWidth:2,pointRadius:4,pointBackgroundColor:'#10b981',yAxisID:'y1',tension:.3,order:0}
+    ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{title:{display:true,text:supplier+' 跨区域多维对比',font:{size:13,weight:'bold'}},legend:{position:'bottom',labels:{font:{size:10},padding:12,usePointStyle:true,pointStyleWidth:8}}},
+    scales:{y:{type:'linear',position:'left',grid:{color:'#f3f4f6'},ticks:{callback:v=>FM(v),font:{size:9}},title:{display:true,text:'日均人数',font:{size:9}}},
+            y1:{type:'linear',position:'right',grid:{display:false},ticks:{callback:v=>'$'+v,font:{size:9}},title:{display:true,text:'结算价/总分',font:{size:9}}}}}});
+
+  // Build analysis panel
+  const bestRegion=rows.reduce((a,b)=>a['总分']>b['总分']?a:b);
+  const worstRegion=rows.reduce((a,b)=>a['总分']<b['总分']?a:b);
+  const avgPrice=rows.reduce((s,r)=>s+r['结算价'],0)/rows.length;
+  const maxPrice=Math.max(...rows.map(r=>r['结算价']));
+  const minPrice=Math.min(...rows.map(r=>r['结算价']));
+  const priceSpread=maxPrice-minPrice;
+  let analysis='<div style="background:#f8fafc;border-radius:6px;padding:10px 12px;">';
+  analysis+='<div style="font-weight:600;font-size:12px;margin-bottom:6px;color:#0f172a;">📋 对比分析</div>';
+  analysis+='<div>服务 <b>'+rows.length+'</b> 个大区</div>';
+  analysis+='<div>最高分：<b style="color:#059669;">'+bestRegion['大区']+'</b>（'+bestRegion['总分']+'分）</div>';
+  analysis+='<div>最低分：<b style="color:#dc2626;">'+worstRegion['大区']+'</b>（'+worstRegion['总分']+'分）</div>';
+  analysis+='<div style="margin-top:4px;">结算价区间：<b>$'+minPrice.toFixed(1)+' ~ $'+maxPrice.toFixed(1)+'</b></div>';
+  analysis+='<div>价差：<b style="color:'+(priceSpread>2?'#dc2626':'#059669')+';">$'+priceSpread.toFixed(1)+'</b></div>';
+  analysis+='<div style="margin-top:4px;font-size:10px;color:#94a3b8;">平均结算价：$'+avgPrice.toFixed(1)+'</div>';
+  if(priceSpread>2)analysis+='<div style="margin-top:4px;font-size:10px;color:#d97706;">⚠ 区域价差较大，建议核查</div>';
+  analysis+='</div>';
+  document.getElementById('crossAnalysis').innerHTML=analysis;
+
+  document.querySelectorAll('#crossTb tr').forEach(r=>r.style.background='');
+  if(el)el.style.background='rgba(37,99,235,0.04)';
+}
+
+// Region Detail (tabbed)
+function renderRegionDetail(){
+  const regions=D.regions;
+  let tabs='';
+  regions.forEach((r,i)=>{tabs+='<span class="region-tab'+(i===0?' active':'')+'" onclick="switchRegion(\''+r+'\',this)">'+r+'</span>';});
+  document.getElementById('regionTabs').innerHTML=tabs;
+  switchRegion(regions[0],document.querySelector('.region-tab'));
+}
+function switchRegion(region,el){
+  currentRegion=region;
+  document.querySelectorAll('.region-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  const dd=D.detail_by_region[region]||[];
+  const regionData=D.people_supplier_chart.find(r=>r.region===region);
+
+  const totalPpl=dd.reduce((s,r)=>s+r['日均使用人数'],0);
+  const totalSupp=[...new Set(dd.map(r=>r['供应商']))].length;
+  const ac=regionData?regionData.a_count:0, bc=regionData?regionData.b_count:0, cc=regionData?regionData.c_count:0, dc=regionData?regionData.d_count:0;
+  const maxGrade=Math.max(ac,bc,cc,dc,1);
+
+  let h='<div style="display:flex;gap:14px;margin-bottom:12px;">';
+  // 左栏：各仓库日均人数柱状图（带小人图标）+ 总人数
+  const whByWarehouse={};
+  dd.forEach(r=>{const w=r['仓库'];whByWarehouse[w]=(whByWarehouse[w]||0)+r['日均使用人数'];});
+  const whEntries=Object.entries(whByWarehouse).sort((a,b)=>b[1]-a[1]);
+  const maxWh=Math.max(...whEntries.map(e=>e[1]),1);
+  h+='<div style="flex:1;background:#fff;border:1px solid #e8ecf1;border-radius:10px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,0.04);">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
+  h+='<div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;font-weight:600;">👤 各仓库日均人数</div>';
+  h+='<div style="font-size:22px;font-weight:800;color:#2563eb;line-height:1;">'+FM(totalPpl)+'<span style="font-size:10px;color:#94a3b8;font-weight:500;"> 人</span></div>';
+  h+='</div>';
+  const barColors=['#3b82f6','#6366f1','#8b5cf6','#a855f7','#06b6d4','#0ea5e9','#2563eb','#4f46e5','#7c3aed','#0891b2'];
+  whEntries.forEach(([w,v],i)=>{
+    const pct=Math.round(v/maxWh*100);
+    const color=barColors[i%barColors.length];
+    h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
+    h+='<span style="width:50px;font-size:9.5px;font-weight:600;color:#475569;text-align:right;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;">'+w+'</span>';
+    h+='<div style="flex:1;height:26px;background:#f1f5f9;border-radius:8px;overflow:hidden;">';
+    h+='<div style="width:'+pct+'%;height:100%;background:'+color+';border-radius:8px;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;transition:width .4s ease;min-width:fit-content;">';
+    h+='<span style="font-size:10px;color:#fff;font-weight:700;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,0.15);">'+FM(v)+'人</span></div></div></div>';
+  });
+  h+='</div>';
+  // 右栏：供应商总数 + ABCD等级分布
+  h+='<div style="flex:1;background:#fff;border:1px solid #e8ecf1;border-radius:10px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,0.04);">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
+  h+='<div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;font-weight:600;">🏢 ABCD等级分布</div>';
+  h+='<div style="font-size:22px;font-weight:800;color:#2563eb;line-height:1;">'+totalSupp+'<span style="font-size:10px;color:#94a3b8;font-weight:500;"> 家供应商</span></div>';
+  h+='</div>';
+  [{l:'A级',v:ac,c:'#10b981',bg:'#d1fae5',r:'≥80分'},{l:'B级',v:bc,c:'#3b82f6',bg:'#dbeafe',r:'60-79分'},{l:'C级',v:cc,c:'#f59e0b',bg:'#fef3c7',r:'40-59分'},{l:'D级',v:dc,c:'#ef4444',bg:'#fee2e2',r:'<40分'}].forEach(g=>{
+    const pct=maxGrade>0?Math.round(g.v/maxGrade*100):0;
+    h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">';
+    h+='<span style="width:24px;font-size:10px;font-weight:600;color:#475569;">'+g.l+'</span>';
+    h+='<span style="font-size:9px;color:#94a3b8;min-width:38px;">'+g.r+'</span>';
+    h+='<div style="flex:1;height:20px;background:'+g.bg+';border-radius:10px;overflow:hidden;">';
+    h+='<div style="width:'+pct+'%;height:100%;background:'+g.c+';border-radius:10px;transition:width .4s ease;"></div></div>';
+    h+='<span style="font-size:11px;font-weight:700;color:#1e293b;min-width:24px;text-align:right;">'+g.v+'</span></div>';
+  });
+  h+='</div>';
+  h+='</div>';
+  // 月份切换
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center;">';
+  h+='<span style="font-size:10px;color:#94a3b8;font-weight:600;margin-right:4px;">月份：</span>';
+  const months=D.months||['2026年5月'];
+  months.forEach((m,i)=>{
+    h+='<span class="region-tab'+(i===0?' active':'')+'" onclick="switchMonth(\''+region+'\',\''+m+'\',this)" style="font-size:10px;padding:5px 12px;">'+m+'</span>';
+  });
+  h+='</div>';
+  // 仓库筛选按钮
+  const warehouses=[...new Set(dd.map(r=>r['仓库']))].sort();
+  h+='<div id="warehouseBtns" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">';
+  h+='<span style="font-size:10px;color:#94a3b8;font-weight:600;margin-right:4px;">仓库：</span>';
+  h+='<span class="region-tab active" onclick="filterByWarehouse(\''+region+'\',\'全部\',this)" style="font-size:10px;padding:5px 12px;">全部</span>';
+  warehouses.forEach(w=>{
+    h+='<span class="region-tab" onclick="filterByWarehouse(\''+region+'\',\''+w+'\',this)" style="font-size:10px;padding:5px 12px;">'+w+'</span>';
+  });
+  h+='</div>';
+  h+='<div class="table-card"><div class="table-wrap" style="max-height:520px;"><table style="width:100%;"><thead><tr><th>评级</th><th>合规</th><th>仓库</th><th>供应商</th><th>状态</th><th>日均人数</th><th>计时分拣工时薪</th><th>Markup</th><th>结算价</th><th>总分</th><th></th></tr></thead><tbody id="regionTableBody">';
+  dd.forEach((r,i)=>{
+    const sc=r['总分']>=80?'shi':r['总分']>=60?'smd':'slo';
+    const rowId='regdet-'+region.replace(/[^a-zA-Z]/g,'')+'-'+i;
+    h+='<tr class="erow" onclick="toggleRegDet(\''+region+'\','+i+')" id="row-'+rowId+'" style="border-bottom:2px solid #e8ecf1;">';
+    h+='<td><span class="badge badge-'+r['等级']+'">'+r['等级']+'级</span></td>';
+    if(r['合规标签']==='不合规')h+='<td><span class="nc">不合规</span></td>';
+    else h+='<td><span style="color:#059669">合规</span></td>';
+    h+='<td style="text-align:center;">'+r['仓库']+'</td><td style="text-align:center;">'+r['供应商']+'</td>';
+    const status=r['使用状态']||'';
+    if(status==='停用')h+='<td><span class="badge badge-D" style="font-size:9px;">停用</span></td>';
+    else if(status==='数据不完整')h+='<td><span class="badge badge-C" style="font-size:9px;">数据不完整</span></td>';
+    else if(status==='启用')h+='<td><span class="badge badge-A" style="font-size:9px;">启用</span></td>';
+    else h+='<td></td>';
+    const wage=r['分拣工时薪']||0;
+    const settle=r['分拣工结算价']||0;
+    h+='<td style="text-align:center;">'+FM(r['日均使用人数'])+'</td><td style="text-align:center;">$'+(typeof wage==='number'?wage.toFixed(1):wage)+'</td>';
+    h+='<td style="text-align:center;">'+r['markup']+'%</td><td style="text-align:center;">$'+(typeof settle==='number'?settle.toFixed(2):settle)+'</td>';
+    h+='<td style="text-align:center;" class="'+sc+'"><strong>'+r['总分']+'</strong></td><td style="color:#2563eb;font-size:10px;text-align:center;">▸</td></tr>';
+    h+='<tr class="det" id="'+rowId+'" style="display:none;"><td colspan="12" style="background:#fafbfc;padding:0;border-top:1px solid #e8ecf1;">';
+    h+='<div style="display:flex;gap:16px;align-items:center;padding:10px 10px;">';
+    // Radar chart - fixed size, enough for labels
+    h+='<div style="width:210px;height:210px;flex-shrink:0;display:flex;align-items:center;justify-content:center;"><canvas id="radar-'+region.replace(/[^a-zA-Z]/g,'')+'-'+i+'"></canvas></div>';
+    // Detail scores - fill remaining space
+    h+='<div style="flex:1;min-width:0;">';
+    h+='<div class="dg" style="grid-template-columns:1fr 1fr;">';
+    h+='<div class="di"><span class="dn">报价竞争力</span><span class="dv'+(r['报价竞争力得分']>=60?' ok':'')+'">'+(r['报价竞争力_pct']||'?')+'%（'+r['报价竞争力得分']+'分）</span></div>';
+    h+='<div class="di"><span class="dn">派遣满足率</span><span class="dv'+(r['派遣满足率得分']>=60?' ok':'')+'">'+(r['派遣满足率_pct']||'?')+'%（'+r['派遣满足率得分']+'分）</span></div>';
+    h+='<div class="di"><span class="dn">考勤准确率</span><span class="dv'+(r['考勤准确率得分']>=60?' ok':'')+'">'+(r['考勤准确率_pct']||'?')+'%（'+r['考勤准确率得分']+'分）</span></div>';
+    h+='<div class="di"><span class="dn">人员稳定率</span><span class="dv'+(r['人员稳定率得分']>=60?' ok':'')+'">'+(r['人员稳定率_pct']||'?')+'%（'+r['人员稳定率得分']+'分）</span></div>';
+    h+='</div>';
+    // 底部：定量考核+扣分 | Onsite Mgr
+    const dedList=r['扣分明细列表']||[];
+    const hasDed=dedList.length>0;
+    const mgrRatio=r['onsite_manager_管理幅宽']||0;
+    const mgrPeople=mgrRatio>0?Math.round(1/mgrRatio):0;
+    const dailyPeople=r['日均使用人数']||0;
+    const minMgrNeeded=Math.ceil(dailyPeople/30);
+    const hasMgr=mgrRatio>0;
+    const mgrOk=hasMgr&&mgrPeople<=30;
+    h+='<div class="dg" style="grid-template-columns:1fr 1fr;">';
+    h+='<div class="di" style="flex-direction:column;">';
+    h+='<div style="display:flex;justify-content:space-between;width:100%;min-height:22px;align-items:center;">';
+    h+='<span class="dn">定量考核分数</span><span class="dv">'+r['定量考核总分']+'</span></div>';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;width:100%;min-height:22px;">';
+    h+='<span class="dn">扣分</span>';
+    if(hasDed){
+      h+='<div style="display:flex;flex-wrap:wrap;gap:2px;">';
+      dedList.forEach(dd=>{
+        h+='<span style="background:#fef2f2;border:1px solid #fecaca;border-radius:3px;padding:1px 5px;font-size:9px;color:#dc2626;font-weight:600;">'+dd['项目']+'('+dd['扣分']+')</span>';
+      });
+      h+='</div>';
+    }else{
+      h+='<span class="dv ok">0</span>';
+    }
+    h+='</div>';
+    h+='</div>';
+    h+='<div class="di" style="flex-direction:column;">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;width:100%;min-height:22px;">';
+    h+='<span class="dn">是否有Onsite Mgr</span>';
+    h+='<span class="badge '+(hasMgr?'badge-A':'badge-D')+'">'+(hasMgr?'有':'无')+'</span></div>';
+    if(hasMgr){
+      h+='<div style="display:flex;justify-content:space-between;align-items:center;width:100%;min-height:22px;">';
+      h+='<span class="dn">管理幅宽（标准：1/30）</span>';
+      h+='<span class="badge '+(mgrOk?'badge-A':'badge-D')+'">'+(mgrOk?'达标':'不达标')+'</span></div>';
+    }else{
+      h+='<div style="display:flex;justify-content:space-between;align-items:center;width:100%;min-height:22px;">';
+      if(dailyPeople<30){
+        h+='<span class="dn">日均'+dailyPeople+'人（<30人）</span>';
+        h+='<span class="badge badge-A">可不配置</span>';
+      }else{
+        const needMgr=Math.floor(dailyPeople/30);
+        h+='<span class="dn">日均'+dailyPeople+'人，至少配置'+needMgr+'位Mgr</span>';
+        h+='<span class="badge badge-D">建议配置</span>';
+      }
+      h+='</div>';
+    }
+    h+='</div>';
+    h+='</div>';
+    if(r['备注']||(r['合规标签']==='不合规'))h+='<div style="padding:4px 0 0 18.5px;">';
+    if(r['备注'])h+='<div style="font-size:11px;color:#64748b;text-align:left;">备注：'+r['备注']+'</div>';
+    if(r['合规标签']==='不合规')h+='<div style="font-size:11px;color:#dc2626;text-align:left;">不合规：'+r['不合规原因']+'</div>';
+    if(r['备注']||(r['合规标签']==='不合规'))h+='</div>';
+    h+='</div></div>';
+    h+='</td></tr>';
+  });
+  h+='</tbody></table></div></div>';
+  document.getElementById('regionContent').innerHTML=h;
+  // 存储当前区域数据用于仓库筛选
+  window._currentRegionData=dd;
+  window._currentRegion=region;
+}
+
+// 渲染表格行（复用逻辑）
+function renderRegionTableRows(region, data, startIdx){
+  let rows='';
+  data.forEach((r,i)=>{
+    const actualIdx=startIdx+i;
+    const sc=r['总分']>=80?'shi':r['总分']>=60?'smd':'slo';
+    const rowId='regdet-'+region.replace(/[^a-zA-Z]/g,'')+'-'+actualIdx;
+    rows+='<tr class="erow" onclick="toggleRegDet(\''+region+'\','+actualIdx+')" id="row-'+rowId+'" style="border-bottom:2px solid #e8ecf1;">';
+    rows+='<td><span class="badge badge-'+r['等级']+'">'+r['等级']+'级</span></td>';
+    if(r['合规标签']==='不合规')rows+='<td><span class="nc">不合规</span></td>';
+    else rows+='<td><span style="color:#059669">合规</span></td>';
+    rows+='<td style="text-align:center;">'+r['仓库']+'</td><td style="text-align:center;">'+r['供应商']+'</td>';
+    // 使用状态（6月数据）
+    const status=r['使用状态']||'';
+    if(status==='停用')rows+='<td><span class=\"badge badge-D\" style=\"font-size:9px;\">停用</span></td>';
+    else if(status==='数据不完整')rows+='<td><span class=\"badge badge-C\" style=\"font-size:9px;\">数据不完整</span></td>';
+    else if(status==='启用')rows+='<td><span class=\"badge badge-A\" style=\"font-size:9px;\">启用</span></td>';
+    else rows+='<td></td>';
+    const wage=r['分拣工时薪']||0;
+    const settle=r['分拣工结算价']||0;
+    rows+='<td style="text-align:center;">'+FM(r['日均使用人数'])+'</td><td style="text-align:center;">$'+(typeof wage==='number'?wage.toFixed(1):wage)+'</td>';
+    rows+='<td style="text-align:center;">'+r['markup']+'%</td><td style="text-align:center;">$'+(typeof settle==='number'?settle.toFixed(2):settle)+'</td>';
+    rows+='<td style="text-align:center;" class="'+sc+'"><strong>'+r['总分']+'</strong></td><td style="color:#2563eb;font-size:10px;text-align:center;">▸</td></tr>';
+    rows+='<tr class="det" id="'+rowId+'" style="display:none;"><td colspan="12" style="background:#fafbfc;padding:0;border-top:1px solid #e8ecf1;">';
+    rows+='<div style="display:flex;gap:16px;align-items:center;padding:10px 10px;">';
+    rows+='<div style="width:210px;height:210px;flex-shrink:0;display:flex;align-items:center;justify-content:center;"><canvas id="radar-'+region.replace(/[^a-zA-Z]/g,'')+'-'+actualIdx+'"></canvas></div>';
+    rows+='<div style="flex:1;min-width:0;">';
+    rows+='<div class="dg" style="grid-template-columns:1fr 1fr;">';
+    rows+='<div class="di"><span class="dn">报价竞争力</span><span class="dv'+(r['报价竞争力得分']>=60?' ok':'')+'">'+(r['报价竞争力_pct']||'?')+'%（'+r['报价竞争力得分']+'分）</span></div>';
+    rows+='<div class="di"><span class="dn">派遣满足率</span><span class="dv'+(r['派遣满足率得分']>=60?' ok':'')+'">'+(r['派遣满足率_pct']||'?')+'%（'+r['派遣满足率得分']+'分）</span></div>';
+    rows+='<div class="di"><span class="dn">考勤准确率</span><span class="dv'+(r['考勤准确率得分']>=60?' ok':'')+'">'+(r['考勤准确率_pct']||'?')+'%（'+r['考勤准确率得分']+'分）</span></div>';
+    rows+='<div class="di"><span class="dn">人员稳定率</span><span class="dv'+(r['人员稳定率得分']>=60?' ok':'')+'">'+(r['人员稳定率_pct']||'?')+'%（'+r['人员稳定率得分']+'分）</span></div>';
+    rows+='</div>';
+    const dedList=r['扣分明细列表']||[];
+    const hasDed=dedList.length>0;
+    const mgrRatio=r['onsite_manager_管理幅宽']||0;
+    const mgrPeople=mgrRatio>0?Math.round(1/mgrRatio):0;
+    const dailyPeople=r['日均使用人数']||0;
+    const hasMgr=mgrRatio>0;
+    const mgrOk=hasMgr&&mgrPeople<=30;
+    rows+='<div class="dg" style="grid-template-columns:1fr 1fr;">';
+    rows+='<div class="di" style="flex-direction:column;">';
+    rows+='<div style="display:flex;justify-content:space-between;width:100%;min-height:22px;align-items:center;">';
+    rows+='<span class="dn">定量考核分数</span><span class="dv">'+r['定量考核总分']+'</span></div>';
+    rows+='<div style="display:flex;justify-content:space-between;align-items:center;width:100%;min-height:22px;">';
+    rows+='<span class="dn">扣分</span>';
+    if(hasDed){
+      rows+='<div style="display:flex;flex-wrap:wrap;gap:2px;">';
+      dedList.forEach(dd=>{rows+='<span style="background:#fef2f2;border:1px solid #fecaca;border-radius:3px;padding:1px 5px;font-size:9px;color:#dc2626;font-weight:600;">'+dd['项目']+'('+dd['扣分']+')</span>';});
+      rows+='</div>';
+    }else{rows+='<span class="dv ok">0</span>';}
+    rows+='</div></div>';
+    rows+='<div class="di" style="flex-direction:column;">';
+    rows+='<div style="display:flex;justify-content:space-between;align-items:center;width:100%;min-height:22px;">';
+    rows+='<span class="dn">是否有Onsite Mgr</span>';
+    rows+='<span class="badge '+(hasMgr?'badge-A':'badge-D')+'">'+(hasMgr?'有':'无')+'</span></div>';
+    if(hasMgr){
+      rows+='<div style="display:flex;justify-content:space-between;align-items:center;width:100%;min-height:22px;">';
+      rows+='<span class="dn">管理幅宽（标准：1/30）</span>';
+      rows+='<span class="badge '+(mgrOk?'badge-A':'badge-D')+'">'+(mgrOk?'达标':'不达标')+'</span></div>';
+    }else{
+      rows+='<div style="display:flex;justify-content:space-between;align-items:center;width:100%;min-height:22px;">';
+      if(dailyPeople<30){
+        rows+='<span class="dn">日均'+dailyPeople+'人（<30人）</span>';
+        rows+='<span class="badge badge-A">可不配置</span>';
+      }else{
+        const needMgr=Math.floor(dailyPeople/30);
+        rows+='<span class="dn">日均'+dailyPeople+'人，至少配置'+needMgr+'位Mgr</span>';
+        rows+='<span class="badge badge-D">建议配置</span>';
+      }
+      rows+='</div>';
+    }
+    rows+='</div></div>';
+    if(r['备注']||(r['合规标签']==='不合规'))rows+='<div style="padding:4px 0 0 18.5px;">';
+    if(r['备注'])rows+='<div style="font-size:11px;color:#64748b;text-align:left;">备注：'+r['备注']+'</div>';
+    if(r['合规标签']==='不合规')rows+='<div style="font-size:11px;color:#dc2626;text-align:left;">不合规：'+r['不合规原因']+'</div>';
+    if(r['备注']||(r['合规标签']==='不合规'))rows+='</div>';
+    rows+='</div></div></td></tr>';
+  });
+  return rows;
+}
+
+// 仓库筛选
+function filterByWarehouse(region, warehouse, el){
+  const btns=el.parentElement.querySelectorAll('.region-tab');
+  btns.forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  const dd=window._currentRegionData||D.detail_by_region[region]||[];
+  let filtered=warehouse==='全部'?[...dd]:dd.filter(r=>r['仓库']===warehouse);
+  filtered.sort((a,b)=>b['总分']-a['总分']);
+  const tbody=document.getElementById('regionTableBody');
+  if(tbody)tbody.innerHTML=renderRegionTableRows(region, filtered, 0);
+}
+
+// 月份切换 - 重新渲染整个区域
+let currentMonth='2026年5月';
+function switchMonth(region, month, el){
+  currentMonth=month;
+  // 更新按钮高亮
+  const btns=el.parentElement.querySelectorAll('.region-tab');
+  btns.forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+
+  // 根据月份选择数据源
+  let dd, regionData;
+  if(month==='2026年6月'){
+    dd=D.detail_by_region_jun[region]||[];
+    regionData=D.people_supplier_chart_jun.find(r=>r.region===region);
+  }else{
+    dd=D.detail_by_region[region]||[];
+    regionData=D.people_supplier_chart.find(r=>r.region===region);
+  }
+  window._currentRegionData=dd;
+  window._currentRegion=region;
+
+  // 重新渲染上面两个卡片
+  const totalPpl=dd.reduce((s,r)=>s+r['日均使用人数'],0);
+  const totalSupp=[...new Set(dd.map(r=>r['供应商']))].length;
+  const ac=regionData?regionData.a_count:0, bc=regionData?regionData.b_count:0, cc=regionData?regionData.c_count:0, dc=regionData?regionData.d_count:0;
+  const maxGrade=Math.max(ac,bc,cc,dc,1);
+
+  // 左栏 - 仓库人数进度条 + 总人数
+  const whByWarehouse={};
+  dd.forEach(r=>{const w=r['仓库'];whByWarehouse[w]=(whByWarehouse[w]||0)+r['日均使用人数'];});
+  const whEntries=Object.entries(whByWarehouse).sort((a,b)=>b[1]-a[1]);
+  const maxWh=Math.max(...whEntries.map(e=>e[1]),1);
+  const barColors=['#3b82f6','#6366f1','#8b5cf6','#a855f7','#06b6d4','#0ea5e9','#2563eb','#4f46e5','#7c3aed','#0891b2'];
+
+  // 更新左栏（第一个卡片）
+  const leftCard=document.querySelector('#regionContent > div > div:first-child');
+  if(leftCard){
+    let lh='<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;\">';
+    lh+='<div style=\"font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;font-weight:600;\">👤 各仓库日均人数</div>';
+    lh+='<div style=\"font-size:22px;font-weight:800;color:#2563eb;line-height:1;\">'+FM(totalPpl)+'<span style=\"font-size:10px;color:#94a3b8;font-weight:500;\"> 人</span></div></div>';
+    whEntries.forEach(([w,v],i)=>{
+      const pct=Math.round(v/maxWh*100);
+      const color=barColors[i%barColors.length];
+      lh+='<div style=\"display:flex;align-items:center;gap:10px;margin-bottom:8px;\">';
+      lh+='<span style=\"width:50px;font-size:9.5px;font-weight:600;color:#475569;text-align:right;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;\">'+w+'</span>';
+      lh+='<div style=\"flex:1;height:26px;background:#f1f5f9;border-radius:8px;overflow:hidden;\">';
+      lh+='<div style=\"width:'+pct+'%;height:100%;background:'+color+';border-radius:8px;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;transition:width .4s ease;min-width:fit-content;\">';
+      lh+='<span style=\"font-size:10px;color:#fff;font-weight:700;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,0.15);\">'+FM(v)+'人</span></div></div></div>';
+    });
+    leftCard.innerHTML=lh;
+  }
+
+  // 更新右栏（第二个卡片）- ABCD等级分布
+  const rightCard=document.querySelector('#regionContent > div > div:nth-child(2)');
+  if(rightCard){
+    let rh='<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;\">';
+    rh+='<div style=\"font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;font-weight:600;\">🏢 ABCD等级分布</div>';
+    rh+='<div style=\"font-size:22px;font-weight:800;color:#2563eb;line-height:1;\">'+totalSupp+'<span style=\"font-size:10px;color:#94a3b8;font-weight:500;\"> 家供应商</span></div></div>';
+    [{l:'A级',v:ac,c:'#10b981',bg:'#d1fae5',r:'≥80分'},{l:'B级',v:bc,c:'#3b82f6',bg:'#dbeafe',r:'60-79分'},{l:'C级',v:cc,c:'#f59e0b',bg:'#fef3c7',r:'40-59分'},{l:'D级',v:dc,c:'#ef4444',bg:'#fee2e2',r:'<40分'}].forEach(g=>{
+      const pct=maxGrade>0?Math.round(g.v/maxGrade*100):0;
+      rh+='<div style=\"display:flex;align-items:center;gap:8px;margin-bottom:8px;\">';
+      rh+='<span style=\"width:24px;font-size:10px;font-weight:600;color:#475569;\">'+g.l+'</span>';
+      rh+='<span style=\"font-size:9px;color:#94a3b8;min-width:38px;\">'+g.r+'</span>';
+      rh+='<div style=\"flex:1;height:20px;background:'+g.bg+';border-radius:10px;overflow:hidden;\">';
+      rh+='<div style=\"width:'+pct+'%;height:100%;background:'+g.c+';border-radius:10px;transition:width .4s ease;\"></div></div>';
+      rh+='<span style=\"font-size:11px;font-weight:700;color:#1e293b;min-width:24px;text-align:right;\">'+g.v+'</span></div>';
+    });
+    rightCard.innerHTML=rh;
+  }
+
+  // 排序并渲染表格
+  dd=[...dd].sort((a,b)=>b['总分']-a['总分']);
+  // 更新仓库按钮
+  const whContainer=document.getElementById('warehouseBtns');
+  if(whContainer){
+    const warehouses=[...new Set(dd.map(r=>r['仓库']))].sort();
+    whContainer.innerHTML='<span style=\"font-size:10px;color:#94a3b8;font-weight:600;margin-right:4px;\">仓库：</span>';
+    // 全部按钮
+    const allBtn=document.createElement('span');
+    allBtn.className='region-tab active';
+    allBtn.style.cssText='font-size:10px;padding:5px 12px;';
+    allBtn.textContent='全部';
+    allBtn.onclick=function(){filterByWarehouse(region,'全部',allBtn);};
+    whContainer.appendChild(allBtn);
+    // 各仓库按钮
+    warehouses.forEach(w=>{
+      const btn=document.createElement('span');
+      btn.className='region-tab';
+      btn.style.cssText='font-size:10px;padding:5px 12px;';
+      btn.textContent=w;
+      btn.onclick=function(){filterByWarehouse(region,w,btn);};
+      whContainer.appendChild(btn);
+    });
+  }
+  const tbody=document.getElementById('regionTableBody');
+  if(tbody)tbody.innerHTML=renderRegionTableRows(region, dd, 0);
+}
+
+const radarInsts={};
+function toggleRegDet(region,i){
+  const key=region.replace(/[^a-zA-Z]/g,'')+'-'+i;
+  const e=document.getElementById('regdet-'+key);
+  if(!e)return;
+  const showing=e.style.display==='none';
+  e.style.display=showing?'table-row':'none';
+  // Highlight parent row
+  const parentRow=document.getElementById('row-regdet-'+key);
+  if(parentRow){
+    parentRow.style.background=showing?'rgba(59,130,246,0.06)':'';
+    parentRow.style.fontWeight=showing?'700':'';
+  }
+  if(showing){
+    setTimeout(()=>{
+      const canvas=document.getElementById('radar-'+key);
+      if(!canvas||canvas.clientWidth===0)return;
+      if(radarInsts[key])radarInsts[key].destroy();
+      const dd=D.detail_by_region[region]||[];
+      const r=dd[i]; if(!r)return;
+      // Calculate deduction impact: 100 = no deduction, 0 = heavy deduction (≥50 total deduction)
+      const dedTotal=Math.abs(parseInt(r['扣分汇总']?.match(/-?\d+/g)?.[0])||0);
+      const dedScore=Math.max(0,100-Math.min(100,Math.abs(dedTotal)*2));
+      radarInsts[key]=new Chart(canvas,{type:'radar',data:{
+        labels:['报价竞争力','派遣满足率','考勤准确率','人员稳定率','合规减分项'],
+        datasets:[{label:r['供应商'],
+          data:[r['报价竞争力得分'],r['派遣满足率得分'],r['考勤准确率得分'],r['人员稳定率得分'],dedScore],
+          backgroundColor:'rgba(79,125,243,0.15)',borderColor:'#4f7df3',borderWidth:2,pointBackgroundColor:'#4f7df3',pointRadius:4}]
+      },options:{responsive:true,maintainAspectRatio:true,
+        plugins:{legend:{display:false}},
+        scales:{r:{min:0,max:100,ticks:{stepSize:20,font:{size:9},backdropColor:'transparent'},pointLabels:{font:{size:9}},grid:{color:'#e2e8f0'}}}}
+      });
+    },100);
+  }
+}
+
+// Cost Analysis
+let c3=null,c4=null,c5=null;
+function renderCostCharts(){
+  const d=D.cost_analysis;
+  const ctx2=document.getElementById('chCost2'); if(!ctx2||ctx2.clientWidth===0)return;
+  if(c3)c3.destroy(); if(c4)c4.destroy(); if(c5)c5.destroy();
+  c3=new Chart(ctx2,{type:'bar',data:{
+    labels:d.map(x=>x['大区']),
+    datasets:[
+      {label:'计时成本',data:d.map(x=>Math.round(x['计时成本'])),backgroundColor:'#4f7df3',stack:'cost',barPercentage:.7,order:1},
+      {label:'计件成本',data:d.map(x=>Math.round(x['计件成本'])),backgroundColor:'#a5b4fc',borderRadius:{topLeft:3,topRight:3},stack:'cost',barPercentage:.7,order:1},
+      {label:'日均人数',data:d.map(x=>Math.round(x['日均人数'])),type:'line',borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.06)',fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#f59e0b',yAxisID:'y1',tension:.3,order:0}
+    ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:12,usePointStyle:true,pointStyleWidth:8}}},
+    scales:{y:{type:'linear',position:'left',grid:{color:'#f3f4f6'},ticks:{callback:v=>'$'+(v/1e6).toFixed(1)+'M',font:{size:9}}},
+            y1:{type:'linear',position:'right',grid:{display:false},ticks:{callback:v=>FM(v),font:{size:9}}}}}});
+
+  // Profit chart
+  // Profit chart — stacked bar: 时薪(base) + 雇主成本(middle) + 利润(top) = 结算价, line = 结算价标线
+  // Use region-specific employer cost rates
+  const profitBars=d.map(x=>{
+    const ecRate=x['雇主成本率']||0.12;
+    return Math.round((x['平均结算价']-x['平均时薪']-x['平均时薪']*ecRate)*100)/100;
+  });
+  const empCostBars=d.map(x=>{
+    const ecRate=x['雇主成本率']||0.12;
+    return Math.round(x['平均时薪']*ecRate*100)/100;
+  });
+  const wageBars=d.map(x=>Math.round(x['平均时薪']*100)/100);
+  c4=new Chart(document.getElementById('chProfit'),{type:'bar',data:{
+    labels:d.map(x=>x['大区']),
+    datasets:[
+      {label:'时薪（工人所得）',data:wageBars,backgroundColor:'#93c5fd',stack:'profit',barPercentage:.65,order:1},
+      {label:'雇主成本(WC+税+管理)',data:empCostBars,backgroundColor:'#fca5a5',stack:'profit',barPercentage:.65,order:1},
+      {label:'供应商利润',data:profitBars,backgroundColor:'#6ee7b7',stack:'profit',barPercentage:.65,order:1},
+      {label:'结算价',data:d.map(x=>Math.round(x['平均结算价']*100)/100),type:'line',borderColor:'#0f172a',borderWidth:2,pointRadius:4,pointBackgroundColor:'#0f172a',yAxisID:'y',order:0,borderDash:[4,3]}
+    ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:12,usePointStyle:true,pointStyleWidth:8}},
+      tooltip:{callbacks:{footer:function(items){const i=items[0].dataIndex;const p=profitBars[i];const pct=d[i]['平均结算价']>0?(p/d[i]['平均结算价']*100).toFixed(1):0;return '利润率: '+pct+'% | 利润: $'+p.toFixed(2);}}}},
+    scales:{y:{grid:{color:'#f3f4f6'},ticks:{callback:v=>'$'+v,font:{size:9}},title:{display:true,text:'$/小时',font:{size:9}}}}}});
+  // Ladder matrix table (用工量×利润率 交叉对照) + 汇总行
+  const lm=D.ladder_matrix||[];
+  const ld=D.ladder_data||[];
+  let lh='';
+  const profitHeaders=['≥20%','10%-20%','5%-10%','0%-5%','<0%（需核查）'];
+  let totalCount=0, totalCost=0, totalSaving=0;
+  lm.forEach((row,i)=>{
+    const ldRow=ld[i]||{};
+    totalCount+=ldRow['count']||0; totalCost+=ldRow['current_cost']||0; totalSaving+=ldRow['annual_saving']||0;
+    lh+='<tr><td><strong>'+row['用量阶梯'].split(': ')[1]+'</strong></td>';
+    profitHeaders.forEach(h=>{
+      const v=row[h]||'';
+      const isDiscount=v.startsWith('降');
+      lh+='<td style="text-align:center;font-weight:600;color:'+(isDiscount?'#dc2626':'#94a3b8')+';">'+v+'</td>';
+    });
+    lh+='<td>'+ldRow['count']+'家</td>';
+    lh+='<td>$'+FM(ldRow['current_cost']||0)+'</td>';
+    lh+='<td style="color:#059669;font-weight:600;">$'+FM(ldRow['annual_saving']||0)+'</td></tr>';
+  });
+  // Summary row
+  lh+='<tr style="background:#f0f9ff;font-weight:700;border-top:2px solid #3b82f6;"><td><strong>汇总</strong></td>';
+  profitHeaders.forEach(()=>lh+='<td></td>');
+  lh+='<td>'+totalCount+'家</td><td>$'+FM(totalCost)+'</td><td style="color:#059669;">$'+FM(totalSaving)+'</td></tr>';
+  document.getElementById('ladderMatrixBody').innerHTML=lh;
+}
+
+function renderCostAnalysis(){
+  let ph=''; D.cost_analysis.forEach(r=>{
+    const ecRate=r['雇主成本率']||0.12, ec=r['雇主成本']||(r['平均时薪']*ecRate), pf=r['利润_per_h']||(r['平均结算价']-r['平均时薪']-ec), pfp=r['利润率']||(r['平均结算价']>0?pf/r['平均结算价']*100:0);
+    let sug=pfp>15?'降5%-8%':pfp>10?'降3%-5%':pfp>5?'降1%-3%':pfp>0?'维持现价':'<span style=\"color:#dc2626;\">核查成本</span>';
+    ph+='<tr><td>'+r['大区']+'</td><td>'+FM(r['日均人数'])+'</td>';
+    ph+='<td>$'+r['平均时薪'].toFixed(1)+'</td><td>$'+r['平均结算价'].toFixed(1)+'</td>';
+    ph+='<td>'+r['平均markup']+'%</td><td>'+(ecRate*100).toFixed(1)+'%</td>';
+    ph+='<td>$'+ec.toFixed(2)+'</td><td style="color:'+(pf>0?'#2563eb':'#dc2626')+';font-weight:600;">$'+pf.toFixed(2)+'</td><td>'+pfp.toFixed(1)+'%</td><td>'+sug+'</td></tr>';
+  });
+  document.getElementById('profitTb').innerHTML=ph;
+
+  // Supplier cost structure + negotiation table
+  const nego=D.supplier_negotiation||[];
+  let nh=''; nego.forEach((r,i)=>{
+    const pr=r['利润率']; const disc=r['建议降价%']; const profitColor=pr>10?'#059669':pr>0?'#2563eb':'#dc2626';
+    const rowBg=pr>15?'background:#f0fdf4;':pr<0?'background:#fef2f2;':'';
+    let discDisplay=disc>0?'<b style=\"color:#dc2626;\">降'+disc+'%</b>':(pr<0?'<span style=\"color:#dc2626;\">需核查</span>':'<span style=\"color:#64748b;\">维持</span>');
+    let strategy=r['谈价策略']||'';
+    nh+='<tr style=\"'+rowBg+'\">';
+    nh+='<td>'+(i+1)+'</td><td><strong>'+r['供应商']+'</strong></td><td style=\"font-size:10px;max-width:80px;white-space:normal;line-height:1.3;\">'+r['大区']+'</td>';
+    nh+='<td style=\"font-size:10px;font-weight:500;\">'+r['仓库']+'</td>';
+    nh+='<td>'+FM(r['日均人数'])+'</td><td>$'+r['结算价'].toFixed(2)+'</td>';
+    nh+='<td>$'+(r['时薪']||0).toFixed(2)+'</td>';
+    nh+='<td>$'+(r['雇主成本/h']||0).toFixed(2)+'</td>';
+    nh+='<td style=\"color:'+profitColor+';font-weight:700;\">$'+r['利润/h'].toFixed(2)+'</td>';
+    nh+='<td style=\"color:'+profitColor+';font-weight:600;\">'+pr.toFixed(1)+'%</td>';
+    nh+='<td>'+discDisplay+'</td>';
+    nh+='<td>$'+FM(r['当月成本']||0)+'</td>';
+    nh+='<td>$'+FM(r['预计年节省'])+'</td>';
+    nh+='<td style=\"font-size:9.5px;color:#475569;max-width:260px;white-space:normal;line-height:1.4;\">'+strategy+'</td></tr>';
+  });
+  document.getElementById('negoTb').innerHTML=nh;
+  setTimeout(renderCostCharts,100);
+}
+
+// Compliance Charts
+let c6=null,c7=null;
+function renderComplianceCharts(){
+  const total=D.kpi.total_supplier_count, ncomp=D.kpi.coi_noncompliant;
+  const ctx6=document.getElementById('chCOI'); if(!ctx6||ctx6.clientWidth===0)return;
+  if(c6)c6.destroy(); if(c7)c7.destroy();
+  c6=new Chart(ctx6,{type:'doughnut',data:{
+    labels:['合规','不合规'], datasets:[{data:[total-ncomp,ncomp],backgroundColor:['#10b981','#ef4444'],borderWidth:0}]
+  },options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:12}}}}}); 
+
+  const rd=D.people_supplier_chart;
+  c7=new Chart(document.getElementById('chNonCompByRegion'),{type:'bar',data:{
+    labels:rd.map(x=>x.region),
+    datasets:[
+      {label:'合规',data:rd.map(x=>x.compliant),backgroundColor:'#10b981',stack:'s',barPercentage:.6,order:1},
+      {label:'不合规',data:rd.map(x=>x.noncompliant),backgroundColor:'#ef4444',borderRadius:{topLeft:3,topRight:3},stack:'s',barPercentage:.6,order:1}
+    ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:12,usePointStyle:true,pointStyleWidth:8}},
+      tooltip:{callbacks:{footer:function(items){const i=items[0].dataIndex;const t=rd[i].total_suppliers;return '供应商总数: '+t;}}}},
+    scales:{y:{grid:{color:'#f3f4f6'},stacked:true,ticks:{font:{size:9}},title:{display:true,text:'供应商数',font:{size:9}}}}}});
+}
+
+// Insurance
+function renderInsurance(){
+  let h=''; D.insurance.forEach(r=>{
+    h+='<tr><td>'+r['区域']+'</td><td>'+r['供应商']+'</td>';
+    h+='<td style="color:#dc2626;">'+r['存在问题']+'</td><td>'+r['区域反馈进度']+'</td>';
+    h+='<td>'+(r['区长是否知悉']==='是'?'<span style="color:#059669;font-weight:600;">是</span>':r['区长是否知悉']||'-')+'</td>';
+    h+='<td>'+r['责任人']+'</td><td>'+r['DDL']+'</td></tr>';
+  });
+  document.getElementById('insTb').innerHTML=h;
+
+  // Noncompliant cards
+  const nc=D.noncompliant_cards||[];
+  let nch='';
+  nc.forEach(r=>{
+    nch+='<div class="cc"><div class="ci">⚠️</div><div class="ct"><div class="cn">'+r['供应商']+' <span style="font-weight:400;color:#94a3b8;font-size:10.5px;">· '+r['大区']+' · '+r['仓库']+'</span></div>';
+    nch+='<div class="cd">'+r['问题']+'</div><div class="ca">处理建议：立即整改，补办Workers Compensation保险</div></div></div>';
+  });
+  document.getElementById('noncompliantCards').innerHTML=nch;
+
+  setTimeout(renderComplianceCharts,200);
+}
+
+// Risk Charts
+let c8=null,c9=null;
+function renderRiskCharts(){
+  const ctx8=document.getElementById('chGrade'); if(!ctx8||ctx8.clientWidth===0)return;
+  if(c8)c8.destroy(); if(c9)c9.destroy();
+  const grades={A:D.kpi.a_suppliers,B:0,C:0,D:D.kpi.d_suppliers};
+  D.supplier_table.forEach(r=>{if(r['等级']==='B')grades.B++;if(r['等级']==='C')grades.C++;});
+  c8=new Chart(ctx8,{type:'doughnut',data:{
+    labels:['A级','B级','C级','D级'],
+    datasets:[{data:[grades.A,grades.B,grades.C,grades.D],backgroundColor:['#10b981','#3b82f6','#f59e0b','#ef4444'],borderWidth:0}]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:12}}}}});
+
+  const scores=D.supplier_table.map(r=>r['总分']);
+  const buckets={'>80':0,'60-80':0,'40-60':0,'<40':0};
+  scores.forEach(s=>{if(s>=80)buckets['>80']++;else if(s>=60)buckets['60-80']++;else if(s>=40)buckets['40-60']++;else buckets['<40']++;});
+  c9=new Chart(document.getElementById('chScoreDist'),{type:'bar',data:{
+    labels:['<40分','40-60分','60-80分','>80分'],
+    datasets:[{data:[buckets['<40'],buckets['40-60'],buckets['60-80'],buckets['>80']],backgroundColor:['#ef4444','#f59e0b','#3b82f6','#10b981'],barPercentage:.6}]
+  },options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{y:{grid:{color:'#f3f4f6'},ticks:{font:{size:9}}}}}});
+}
+
+// Risk
+function renderRisk(){
+  // Risk stats cards
+  const rs=D.risk_stats||{};
+  document.getElementById('cardLowScore').querySelector('.val').textContent=rs.low_score_count||0;
+  document.getElementById('cardDeduction').querySelector('.val').textContent=rs.has_deduction||0;
+
+  // Accident card with details
+  const al=rs.accident_list||[];
+  let ah='<div class="lbl">库内安全事故</div><div class="val" style="color:#dc2626;">'+(rs.accident_count||0)+'起</div>';
+  if(al.length>0){
+    ah+='<div style="margin-top:6px;font-size:10px;color:#475569;line-height:1.5;max-height:90px;overflow-y:auto;">';
+    al.forEach(a=>{
+      ah+='<div style="margin-bottom:4px;padding:4px 6px;background:#fef2f2;border-radius:4px;border-left:2px solid #ef4444;">';
+      ah+='<span style="color:#dc2626;font-weight:600;">'+a['大区']+' · '+a['仓库']+'</span> <span style="font-weight:500;">'+a['供应商']+'</span>';
+      ah+='<div style="color:#64748b;font-size:9.5px;margin-top:1px;">'+a['事件']+'</div></div>';
+    });
+    ah+='</div>';
+  }
+  document.getElementById('accidentCard').innerHTML=ah;
+
+  // High risk table (<50) — removed 操作指引 column
+  const hr=D.high_risk||[];
+  let hrh=''; hr.forEach(r=>{
+    hrh+='<tr style="background:rgba(220,38,38,0.02);"><td>'+r['大区']+'</td><td>'+r['仓库']+'</td><td><strong>'+r['供应商']+'</strong></td>';
+    hrh+='<td class="r" style="color:#dc2626;font-weight:700;">'+r['总分']+'</td>';
+    hrh+='<td class="r" style="color:#dc2626;">'+(r['扣分总分']!==0?r['扣分总分']:'0')+'</td>';
+    hrh+='<td style="font-size:10px;max-width:200px;white-space:normal;">'+r['扣分汇总']+'</td>';
+    hrh+='<td style="color:#d97706;font-weight:600;">限期整改</td></tr>';
+  });
+  document.getElementById('highRiskTb').innerHTML=hrh;
+  setTimeout(renderRiskCharts,200);
+}
+
+// ─── 导出功能 ───
+function exportHTML(){
+  const jsonStr=JSON.stringify(D);
+  // 用fetch下载原始dashboard.html模板，然后用JS在客户端替换
+  fetch('dashboard.html')
+    .then(r=>r.text())
+    .then(template=>{
+      // 在原始模板中找到 let D={}; 到 function init 之间的fetch块并替换
+      const idxD=template.indexOf('let D={};');
+      const idxInit=template.indexOf('\nfunction init',idxD);
+      if(idxD===-1||idxInit===-1){alert('导出失败：模板解析错误');return;}
+      const before=template.substring(0,idxD);
+      const after=template.substring(idxInit);
+      const shareHTML=before+'let D='+jsonStr+';console.log(\"Data inline\");init();'+after;
+      const blob=new Blob(['<!DOCTYPE html>\n'+shareHTML],{type:'text/html;charset=utf-8'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;
+      a.download='GUS_劳务供应商管理看板_'+new Date().toISOString().slice(0,10)+'.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      alert('HTML文件已下载！可直接发送给他人用浏览器打开查看。');
+    })
+    .catch(()=>alert('导出失败，请确认服务器正常运行'));
+}
+
+async function exportRegionImage(){
+  if(typeof html2canvas==='undefined'){alert('html2canvas 加载中，请稍后再试');return;}
+  const content=document.getElementById('regionContent');
+  if(!content){alert('请先选择一个大区');return;}
+
+  const region=currentRegion;
+  // 先展开所有明细并渲染雷达图
+  const allDets=content.querySelectorAll('.det');
+  allDets.forEach(d=>d.style.display='table-row');
+  if(region){
+    const dd=D.detail_by_region[region]||[];
+    dd.forEach((r,i)=>{toggleRegDet(region,i);toggleRegDet(region,i);});
+  }
+  await new Promise(r=>setTimeout(r,1000));
+
+  // 创建带标题的包装容器
+  const wrapper=document.createElement('div');
+  wrapper.style.position='fixed';
+  wrapper.style.top='0';
+  wrapper.style.left='-9999px';
+  wrapper.style.width=content.offsetWidth+'px';
+  wrapper.style.background='#f1f5f9';
+  wrapper.style.zIndex='99999';
+  wrapper.style.padding='20px 24px';
+  // 标题
+  const title=document.createElement('div');
+  title.style.cssText='font-size:20px;font-weight:800;color:#fff;margin-bottom:4px;padding:12px 20px;background:linear-gradient(135deg,#0f172a,#1e3a5f);border-radius:8px;letter-spacing:1px;';
+  title.innerHTML='GUS '+region+' <span style="font-weight:500;">供应商考核结果</span>';
+  wrapper.appendChild(title);
+  const subtitle=document.createElement('div');
+  subtitle.style.cssText='font-size:11px;color:#94a3b8;margin-bottom:16px;';
+  subtitle.textContent='导出时间：'+new Date().toLocaleString('zh-CN');
+  wrapper.appendChild(subtitle);
+  // 克隆内容
+  const clone=content.cloneNode(true);
+  clone.style.maxHeight='none';
+  clone.style.overflow='visible';
+  clone.querySelectorAll('*').forEach(el=>{
+    el.style.maxHeight='none';
+    el.style.overflow='visible';
+    el.style.overflowY='visible';
+  });
+  clone.querySelectorAll('canvas[id^="radar-"]').forEach(c=>{
+    try{
+      const origCanvas=document.getElementById(c.id);
+      if(origCanvas){
+        const img=document.createElement('img');
+        img.src=origCanvas.toDataURL('image/png');
+        img.style.width=origCanvas.clientWidth+'px';
+        img.style.height=origCanvas.clientHeight+'px';
+        c.parentNode.replaceChild(img,c);
+      }
+    }catch(e){}
+  });
+  wrapper.appendChild(clone);
+  document.body.appendChild(wrapper);
+
+  try{
+    const canvas=await html2canvas(wrapper,{
+      backgroundColor:'#f1f5f9',
+      scale:2,
+      useCORS:true,
+      logging:false
+    });
+    document.body.removeChild(wrapper);
+    allDets.forEach(d=>d.style.display='none');
+
+    const link=document.createElement('a');
+    link.download='GUS_'+region.replace(/\s+/g,'_')+'_供应商考核结果_'+new Date().toISOString().slice(0,10)+'.png';
+    link.href=canvas.toDataURL('image/png');
+    link.click();
+  }catch(e){
+    if(wrapper.parentNode)document.body.removeChild(wrapper);
+    allDets.forEach(d=>d.style.display='none');
+    alert('导出失败：'+e.message);
+  }
+}
+
+let currentRegion='';
+</script>
+</body>
+</html>

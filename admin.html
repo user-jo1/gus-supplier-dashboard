@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GUS 看板管理后台</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:#f1f5f9;color:#1e293b;min-height:100vh}
+.topbar{background:linear-gradient(135deg,#0f172a,#1e3a5f);color:#fff;padding:0 28px;display:flex;justify-content:space-between;align-items:center;height:52px}
+.topbar h1{font-size:17px;font-weight:700}
+.topbar a{color:rgba(255,255,255,0.7);font-size:12px;text-decoration:none;font-weight:600}
+.topbar a:hover{color:#fff}
+.main{max-width:900px;margin:24px auto;padding:0 20px}
+.card{background:#fff;border:1px solid #e8ecf1;border-radius:10px;padding:20px 24px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,0.03)}
+.card h2{font-size:15px;font-weight:700;margin-bottom:16px;color:#0f172a;display:flex;align-items:center;gap:8px}
+.card h2::before{content:'';width:3px;height:16px;background:#3b82f6;border-radius:2px;display:inline-block}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#f8fafc;padding:10px 12px;text-align:left;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;font-size:11px}
+td{padding:10px 12px;border-bottom:1px solid #f1f5f9;color:#334155}
+tr:hover td{background:rgba(59,130,246,0.02)}
+.badge{display:inline-block;padding:2px 8px;border-radius:5px;font-size:9.5px;font-weight:700}
+.badge-admin{background:#dbeafe;color:#1e40af}
+.badge-viewer{background:#f0fdf4;color:#065f46}
+.btn{padding:6px 14px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:none;transition:all .2s}
+.btn-primary{background:#3b82f6;color:#fff}
+.btn-primary:hover{background:#2563eb}
+.btn-danger{background:#ef4444;color:#fff}
+.btn-danger:hover{background:#dc2626}
+.btn-outline{background:#fff;color:#475569;border:1px solid #dde1e7}
+.btn-outline:hover{border-color:#3b82f6;color:#2563eb}
+.form-row{display:flex;gap:8px;margin-bottom:12px;align-items:flex-end}
+.form-row input, .form-row select{padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:12px;color:#1e293b;outline:none;flex:1}
+.form-row input:focus, .form-row select:focus{border-color:#3b82f6}
+.form-row label{font-size:10px;color:#94a3b8;font-weight:600;margin-bottom:4px;display:block}
+.msg{font-size:12px;padding:8px 12px;border-radius:6px;margin-bottom:12px;display:none}
+.msg-ok{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0}
+.msg-err{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
+.region-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.region-tag{font-size:9px;padding:2px 6px;border-radius:4px;background:#e0f2fe;color:#0369a1}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>⚙️ GUS 看板管理后台</h1>
+  <a href="dashboard.html">← 返回看板</a>
+</div>
+<div class="main">
+  <div class="msg" id="msg"></div>
+
+  <!-- 新增账号 -->
+  <div class="card">
+    <h2>新增子账号</h2>
+    <div class="form-row">
+      <div><label>账号名</label><input type="text" id="newUser" placeholder="如：fl"></div>
+      <div><label>密码</label><input type="password" id="newPass" placeholder="至少6位"></div>
+      <div><label>显示名称</label><input type="text" id="newLabel" placeholder="如：佛州大区"></div>
+    </div>
+    <div class="form-row">
+      <div><label>角色</label><select id="newRole"><option value="viewer">大区查看者</option><option value="admin">管理员</option></select></div>
+      <div><label>授权大区（多选，Ctrl+点击）</label><select id="newRegions" multiple style="height:80px;"></select></div>
+      <div style="display:flex;align-items:flex-end;"><button class="btn btn-primary" onclick="addUser()">＋ 新增账号</button></div>
+    </div>
+  </div>
+
+  <!-- 账号列表 -->
+  <div class="card">
+    <h2>现有账号列表</h2>
+    <table><thead><tr><th>账号</th><th>密码</th><th>显示名称</th><th>角色</th><th>授权大区</th><th>操作</th></tr></thead><tbody id="userTable"></tbody></table>
+  </div>
+</div>
+
+<script>
+const ALL_REGIONS=['FL 佛州大区','GL 大湖大区','MS 中南大区','NE 东北大区','TX 德州大区','WE 美西大区','Ground项目部'];
+
+// 权限校验
+(function(){
+  const authStr=sessionStorage.getItem('gus_auth');
+  if(!authStr){window.location.href='login.html';return;}
+  try{
+    const auth=JSON.parse(authStr);
+    if(auth.role!=='admin'){alert('仅管理员可访问');window.location.href='dashboard.html';return;}
+  }catch(e){window.location.href='login.html';}
+})();
+
+const DEFAULT_USERS=[
+  {username:'admin',password:'gus2026',role:'admin',regions:'*',label:'管理员'},
+  {username:'fl',password:'fl2026',role:'viewer',regions:'FL 佛州大区',label:'佛州大区'},
+  {username:'gl',password:'gl2026',role:'viewer',regions:'GL 大湖大区',label:'大湖大区'},
+  {username:'ms',password:'ms2026',role:'viewer',regions:'MS 中南大区',label:'中南大区'},
+  {username:'ne',password:'ne2026',role:'viewer',regions:'NE 东北大区',label:'东北大区'},
+  {username:'tx',password:'tx2026',role:'viewer',regions:'TX 德州大区',label:'德州大区'},
+  {username:'we',password:'we2026',role:'viewer',regions:'WE 美西大区',label:'美西大区'},
+  {username:'ground',password:'ground2026',role:'viewer',regions:'Ground项目部',label:'Ground项目部'},
+];
+
+function getUsers(){
+  try{
+    const data=localStorage.getItem('gus_users');
+    if(!data){saveUsers(DEFAULT_USERS);return DEFAULT_USERS;}
+    return JSON.parse(data);
+  }catch(e){saveUsers(DEFAULT_USERS);return DEFAULT_USERS;}
+}
+function saveUsers(users){
+  localStorage.setItem('gus_users',JSON.stringify(users));
+}
+function showMsg(text,ok){
+  const m=document.getElementById('msg');
+  m.textContent=text;
+  m.className='msg '+(ok?'msg-ok':'msg-err');
+  m.style.display='block';
+  setTimeout(()=>m.style.display='none',3000);
+}
+
+// 初始化大区多选
+function initRegionsSelect(){
+  const sel=document.getElementById('newRegions');
+  ALL_REGIONS.forEach(r=>{
+    const opt=document.createElement('option');
+    opt.value=r;opt.textContent=r;
+    sel.appendChild(opt);
+  });
+}
+
+function renderUserTable(){
+  const users=getUsers();
+  let h='';
+  users.forEach((u,i)=>{
+    const regions=u.regions==='*'?'全部大区':u.regions;
+    const regionTags=u.regions==='*'?'<span class="region-tag">全部大区</span>':
+      (u.regions||'').split(',').map(r=>'<span class="region-tag">'+r.trim()+'</span>').join('');
+    h+='<tr>';
+    h+='<td><strong>'+u.username+'</strong></td>';
+    h+='<td><span id="pw-'+i+'" data-pw="'+u.password.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'" style="cursor:pointer;color:#3b82f6;font-weight:600;" onclick="togglePw('+i+')" title="点击查看密码">●●●●●●</span></td>';
+    h+='<td>'+u.label+'</td>';
+    h+='<td><span class="badge '+(u.role==='admin'?'badge-admin':'badge-viewer')+'">'+(u.role==='admin'?'管理员':'大区查看者')+'</span></td>';
+    h+='<td><div class="region-tags">'+regionTags+'</div></td>';
+    h+='<td>';
+    h+='<button class="btn btn-outline" style="margin-right:4px;" onclick="editUser('+i+')">修改密码</button>';
+    if(u.username!=='admin'){
+      h+='<button class="btn btn-danger" onclick="deleteUser('+i+')">删除</button>';
+    }
+    h+='</td></tr>';
+  });
+  document.getElementById('userTable').innerHTML=h;
+}
+
+function togglePw(idx){
+  const el=document.getElementById('pw-'+idx);
+  if(!el)return;
+  const pw=el.getAttribute('data-pw');
+  if(el.textContent==='●●●●●●'){
+    el.textContent=pw;
+    el.style.color='#dc2626';
+  }else{
+    el.textContent='●●●●●●';
+    el.style.color='#3b82f6';
+  }
+}
+
+function addUser(){
+  const username=document.getElementById('newUser').value.trim();
+  const password=document.getElementById('newPass').value;
+  const label=document.getElementById('newLabel').value.trim();
+  const role=document.getElementById('newRole').value;
+  const sel=document.getElementById('newRegions');
+  const selectedRegions=Array.from(sel.selectedOptions).map(o=>o.value).join(',');
+
+  if(!username||!password||!label){showMsg('请填写完整信息',false);return;}
+  if(password.length<6){showMsg('密码至少6位',false);return;}
+  if(role==='viewer'&&!selectedRegions){showMsg('请选择授权大区',false);return;}
+
+  const users=getUsers();
+  if(users.find(u=>u.username===username)){showMsg('账号已存在',false);return;}
+
+  users.push({
+    username,password,role,
+    regions:role==='admin'?'*':selectedRegions,
+    label
+  });
+  saveUsers(users);
+  renderUserTable();
+  document.getElementById('newUser').value='';
+  document.getElementById('newPass').value='';
+  document.getElementById('newLabel').value='';
+  showMsg('账号 '+username+' 创建成功',true);
+}
+
+function editUser(index){
+  const users=getUsers();
+  const u=users[index];
+  const newPass=prompt('修改 '+u.username+' 的密码（留空不修改）：');
+  if(newPass===null)return;
+  if(newPass&&newPass.length<6){alert('密码至少6位');return;}
+  if(newPass)u.password=newPass;
+
+  if(u.role!=='admin'){
+    const currentRegions=(u.regions||'').split(',').map(s=>s.trim()).filter(Boolean);
+    let regionPrompt='当前授权大区：'+currentRegions.join(', ')+'\n可选大区：\n';
+    ALL_REGIONS.forEach((r,i)=>regionPrompt+=(i+1)+'. '+r+'\n');
+    regionPrompt+='\n输入序号（逗号分隔）修改授权大区，或留空保持：';
+    const input=prompt(regionPrompt);
+    if(input!==null&&input.trim()){
+      const idxs=input.split(',').map(s=>parseInt(s.trim())).filter(n=>n>=1&&n<=ALL_REGIONS.length);
+      u.regions=idxs.map(i=>ALL_REGIONS[i-1]).join(',');
+    }
+  }
+  saveUsers(users);
+  renderUserTable();
+  showMsg('账号 '+u.username+' 已更新',true);
+}
+
+function deleteUser(index){
+  const users=getUsers();
+  const u=users[index];
+  if(!confirm('确定删除账号 '+u.username+'（'+u.label+'）？'))return;
+  users.splice(index,1);
+  saveUsers(users);
+  renderUserTable();
+  showMsg('账号已删除',true);
+}
+
+initRegionsSelect();
+renderUserTable();
+</script>
+</body>
+</html>
