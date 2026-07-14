@@ -95,6 +95,12 @@ const DEFAULT_USERS=[
   {username:'ADMIN',password:'ADMIN2026',role:'viewer',regions:'FL 佛州大区,GL 大湖大区,MS 中南大区,NE 东北大区,TX 德州大区,WE 美西大区,Ground项目部',label:'全美明细权限'},
 ];
 
+const USERS_VERSION=2;
+if(!localStorage.getItem('gus_users')||parseInt(localStorage.getItem('gus_users_version')||'0')<USERS_VERSION){
+  saveUsers(DEFAULT_USERS);
+  localStorage.setItem('gus_users_version',String(USERS_VERSION));
+}
+
 function getUsers(){
   try{
     const data=localStorage.getItem('gus_users');
