@@ -407,7 +407,7 @@ for _, row in df_j.iterrows():
         '使用状态': ss(row.get('使用状态', '')),
         '日均使用人数': round(sf(row['实际使用人数（日均）'])),
         '分拣工时薪': sf(row.get('计时分拣工时薪', 0)),
-        'markup': normalize_markup(row.get('Markup', 0)) * 100,
+        'markup': round(normalize_markup(row.get('Markup', 0)) * 100),
         '分拣工结算价': sf(row.get('结算价', 0)),
         '报价竞争力得分': round(sf(row['报价竞争力得分'])),
         '派遣满足率得分': round(sf(row['派遣满足率得分'])),
