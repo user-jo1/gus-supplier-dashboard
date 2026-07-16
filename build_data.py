@@ -2,9 +2,9 @@ import pandas as pd
 import json
 import numpy as np
 
-# ─── 读取两个数据源 ───
+# ─── 读取数据源 ───
 may_xlsx = '/Users/mac/Downloads/GUS_劳务供应商考核数据-2.xlsx'
-jun_xlsx = '/Users/mac/Downloads/GUS_劳务供应商考核数据.xlsx'
+jun_xlsx = '/Users/mac/Downloads/GUS_劳务供应商考核数据-3.xlsx'
 
 df_may = pd.read_excel(may_xlsx, sheet_name='数据总表')
 df_summary_may = pd.read_excel(may_xlsx, sheet_name='人数、人次、出勤工时、总成本')
@@ -61,9 +61,9 @@ def process_month(df, df_summary, deduction_cols, deduction_labels, month_label,
         df['合规标签'] = df['合规情况'].apply(lambda x: '不合规' if not str(x).endswith('合规') else '合规')
         df['不合规原因'] = df.apply(lambda r: str(r['合规情况']).replace('COI不合规，', '').strip() if r['合规标签'] == '不合规' else '', axis=1)
     else:
-        # 6月：COI合规备注非空 = 不合规
-        df['合规标签'] = df['COI合规备注'].apply(lambda x: '不合规' if pd.notna(x) and str(x).strip() != '' else '合规')
-        df['不合规原因'] = df['COI合规备注'].apply(lambda x: ss(x) if pd.notna(x) else '')
+        # 6月：COI合规非空 = 不合规
+        df['合规标签'] = df['COI合规'].apply(lambda x: '不合规' if pd.notna(x) and str(x).strip() != '' else '合规')
+        df['不合规原因'] = df['COI合规'].apply(lambda x: ss(x) if pd.notna(x) else '')
     df['分拣工markup_num'] = 0.0  # 6月没有markup数据
 
     df_summary_data = df_summary[df_summary['三级组织'] != '总计'].copy()
@@ -96,11 +96,11 @@ def process_month(df, df_summary, deduction_cols, deduction_labels, month_label,
                 val = int(float(v))
                 ded_total += val
                 ded_detail_list.append({'项目': label, '扣分': val})
-        # 备注：合并备注列 + COI合规备注
+        # 备注：只取备注列，不合规原因取COI合规列
         remark = ss(row.get('备注', ''))
-        coi_remark = ss(row.get('COI合规备注', ''))
+        coi_remark = ss(row.get('COI合规', ''))
         if remark and coi_remark:
-            remark = remark + '；COI：' + coi_remark
+            remark = remark + '；COI不合规：' + coi_remark
         elif coi_remark:
             remark = 'COI：' + coi_remark
 
@@ -381,8 +381,8 @@ for region in regions_order:
 # 6月明细
 df_j = df_jun.copy()
 df_j['等级'] = df_j['总分'].apply(get_grade)
-df_j['合规标签'] = df_j['COI合规备注'].apply(lambda x: '不合规' if pd.notna(x) and str(x).strip() != '' else '合规')
-df_j['不合规原因'] = df_j['COI合规备注'].apply(lambda x: ss(x) if pd.notna(x) else '')
+df_j['合规标签'] = df_j['COI合规'].apply(lambda x: '不合规' if pd.notna(x) and str(x).strip() != '' else '合规')
+df_j['不合规原因'] = df_j['COI合规'].apply(lambda x: ss(x) if pd.notna(x) else '')
 
 detail_jun = []
 for _, row in df_j.iterrows():
@@ -394,21 +394,21 @@ for _, row in df_j.iterrows():
             val = int(float(v))
             ded_total += val
             ded_detail_list.append({'项目': label, '扣分': val})
-    # 合并备注和COI
+    # 备注取备注列，COI不合规备注单独显示
     remark = ss(row.get('备注', ''))
-    coi_remark = ss(row.get('COI合规备注', ''))
+    coi_remark = ss(row.get('COI合规', ''))
     if remark and coi_remark:
-        remark = remark + '；COI：' + coi_remark
+        remark = remark + '；COI不合规：' + coi_remark
     elif coi_remark:
-        remark = 'COI：' + coi_remark
+        remark = 'COI不合规：' + coi_remark
     detail_jun.append({
         '大区': row['大区'], '仓库': row['仓库'], '供应商': row['供应商'],
         '等级': row['等级'], '合规标签': row['合规标签'], '不合规原因': row['不合规原因'],
         '使用状态': ss(row.get('使用状态', '')),
         '日均使用人数': round(sf(row['实际使用人数（日均）'])),
-        '分拣工时薪': sf(row.get('计时分拣工时薪', 0)),
-        'markup': round(normalize_markup(row.get('Markup', 0)) * 100),
-        '分拣工结算价': sf(row.get('结算价', 0)),
+        '分拣工时薪': sf(row.get('分拣工时薪', 0)),
+        'markup': round(normalize_markup(row.get('分拣工markup', 0)) * 100),
+        '分拣工结算价': sf(row.get('分拣工结算价', 0)),
         '报价竞争力得分': round(sf(row['报价竞争力得分'])),
         '派遣满足率得分': round(sf(row['派遣满足率得分'])),
         '考勤准确率得分': round(sf(row['考勤准确率得分'])),

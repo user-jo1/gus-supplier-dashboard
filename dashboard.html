@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>GUS 劳务供应商管理看板</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" onerror="document.body.innerHTML='<div style=\"padding:40px;text-align:center;color:#dc2626;\"><h2>Chart.js 加载失败</h2><p>请检查网络连接，CDN (jsdelivr.net) 可能不可达</p></div>'"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -300,6 +301,8 @@ td.sup{max-width:130px;white-space:normal;text-align:left;font-weight:600}
 </div>
 
 <script>
+// 注册 datalabels 插件
+Chart.register(ChartDataLabels);
 // ─── 权限校验 ───
 (function(){
   const authStr=sessionStorage.getItem('gus_auth');
@@ -600,72 +603,57 @@ function renderRegionDetail(){
 function switchRegion(region,el){
   currentRegion=region;
   document.querySelectorAll('.region-tab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  const dd=D.detail_by_region[region]||[];
-  const regionData=D.people_supplier_chart.find(r=>r.region===region);
+  if(el)el.classList.add('active');
+  renderRegionContent(region);
+}
+
+function renderRegionContent(region){
+  // 根据当前月份获取数据
+  let dd, regionData;
+  if(currentMonth==='2026年6月'){
+    dd=D.detail_by_region_jun[region]||[];
+    regionData=(D.people_supplier_chart_jun||[]).find(r=>r.region===region);
+  }else{
+    dd=D.detail_by_region[region]||[];
+    regionData=D.people_supplier_chart.find(r=>r.region===region);
+  }
 
   const totalPpl=dd.reduce((s,r)=>s+r['日均使用人数'],0);
   const totalSupp=[...new Set(dd.map(r=>r['供应商']))].length;
   const ac=regionData?regionData.a_count:0, bc=regionData?regionData.b_count:0, cc=regionData?regionData.c_count:0, dc=regionData?regionData.d_count:0;
   const maxGrade=Math.max(ac,bc,cc,dc,1);
 
-  let h='<div style="display:flex;gap:14px;margin-bottom:12px;">';
-  // 左栏：各仓库日均人数柱状图（带小人图标）+ 总人数
-  const whByWarehouse={};
-  dd.forEach(r=>{const w=r['仓库'];whByWarehouse[w]=(whByWarehouse[w]||0)+r['日均使用人数'];});
-  const whEntries=Object.entries(whByWarehouse).sort((a,b)=>b[1]-a[1]);
-  const maxWh=Math.max(...whEntries.map(e=>e[1]),1);
-  h+='<div style="flex:1;background:#fff;border:1px solid #e8ecf1;border-radius:10px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,0.04);">';
-  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
-  h+='<div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;font-weight:600;">👤 各仓库日均人数</div>';
-  h+='<div style="font-size:22px;font-weight:800;color:#2563eb;line-height:1;">'+FM(totalPpl)+'<span style="font-size:10px;color:#94a3b8;font-weight:500;"> 人</span></div>';
+  let h='';
+
+  // ─── 顶部：5月vs6月对比折线图（固定不随月份变化）───
+  h+='<div class="charts-row" style="margin-bottom:12px;">';
+  h+='<div class="chart-card"><h3>各仓库日均人数 · 月份对比</h3><div class="chart-wrap" style="height:240px;"><canvas id="chWhTrend"></canvas></div></div>';
+  h+='<div class="chart-card"><h3>ABCD等级分布 · 月份对比</h3><div class="chart-wrap" style="height:240px;"><canvas id="chGradeTrend"></canvas></div></div>';
   h+='</div>';
-  const barColors=['#3b82f6','#6366f1','#8b5cf6','#a855f7','#06b6d4','#0ea5e9','#2563eb','#4f46e5','#7c3aed','#0891b2'];
-  whEntries.forEach(([w,v],i)=>{
-    const pct=Math.round(v/maxWh*100);
-    const color=barColors[i%barColors.length];
-    h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
-    h+='<span style="width:50px;font-size:9.5px;font-weight:600;color:#475569;text-align:right;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;">'+w+'</span>';
-    h+='<div style="flex:1;height:26px;background:#f1f5f9;border-radius:8px;overflow:hidden;">';
-    h+='<div style="width:'+pct+'%;height:100%;background:'+color+';border-radius:8px;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;transition:width .4s ease;min-width:fit-content;">';
-    h+='<span style="font-size:10px;color:#fff;font-weight:700;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,0.15);">'+FM(v)+'人</span></div></div></div>';
-  });
-  h+='</div>';
-  // 右栏：供应商总数 + ABCD等级分布
-  h+='<div style="flex:1;background:#fff;border:1px solid #e8ecf1;border-radius:10px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,0.04);">';
-  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
-  h+='<div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;font-weight:600;">🏢 ABCD等级分布</div>';
-  h+='<div style="font-size:22px;font-weight:800;color:#2563eb;line-height:1;">'+totalSupp+'<span style="font-size:10px;color:#94a3b8;font-weight:500;"> 家供应商</span></div>';
-  h+='</div>';
-  [{l:'A级',v:ac,c:'#10b981',bg:'#d1fae5',r:'≥80分'},{l:'B级',v:bc,c:'#3b82f6',bg:'#dbeafe',r:'60-79分'},{l:'C级',v:cc,c:'#f59e0b',bg:'#fef3c7',r:'40-59分'},{l:'D级',v:dc,c:'#ef4444',bg:'#fee2e2',r:'<40分'}].forEach(g=>{
-    const pct=maxGrade>0?Math.round(g.v/maxGrade*100):0;
-    h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">';
-    h+='<span style="width:24px;font-size:10px;font-weight:600;color:#475569;">'+g.l+'</span>';
-    h+='<span style="font-size:9px;color:#94a3b8;min-width:38px;">'+g.r+'</span>';
-    h+='<div style="flex:1;height:20px;background:'+g.bg+';border-radius:10px;overflow:hidden;">';
-    h+='<div style="width:'+pct+'%;height:100%;background:'+g.c+';border-radius:10px;transition:width .4s ease;"></div></div>';
-    h+='<span style="font-size:11px;font-weight:700;color:#1e293b;min-width:24px;text-align:right;">'+g.v+'</span></div>';
-  });
-  h+='</div>';
-  h+='</div>';
-  // 月份切换
-  h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center;">';
-  h+='<span style="font-size:10px;color:#94a3b8;font-weight:600;margin-right:4px;">月份：</span>';
+
+  // ─── 月份切换按钮 + 仓库按钮（用placeholder+JS绑定）───
   const months=D.months||['2026年5月'];
-  months.forEach((m,i)=>{
-    h+='<span class="region-tab'+(i===0?' active':'')+'" onclick="switchMonth(\''+region+'\',\''+m+'\',this)" style="font-size:10px;padding:5px 12px;">'+m+'</span>';
-  });
-  h+='</div>';
-  // 仓库筛选按钮
+  const currentIdx=months.indexOf(currentMonth);
+  h+='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">';
+  h+='<span style="font-size:10px;color:#94a3b8;font-weight:600;">月份：</span>';
+  h+='<button id="btnPrevMonth" style="border:1px solid #dde1e7;background:#fff;border-radius:6px 0 0 6px;padding:6px 10px;cursor:pointer;font-size:14px;color:#475569;line-height:1;" title="上个月">◀</button>';
+  h+='<span id="monthLabel" style="padding:6px 16px;border-top:1px solid #dde1e7;border-bottom:1px solid #dde1e7;font-size:12px;font-weight:700;color:#1e293b;min-width:80px;text-align:center;display:inline-block;">'+currentMonth+'</span>';
+  h+='<button id="btnNextMonth" style="border:1px solid #dde1e7;background:#fff;border-radius:0 6px 6px 0;padding:6px 10px;cursor:pointer;font-size:14px;color:#475569;line-height:1;" title="下个月">▶</button>';
   const warehouses=[...new Set(dd.map(r=>r['仓库']))].sort();
-  h+='<div id="warehouseBtns" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">';
-  h+='<span style="font-size:10px;color:#94a3b8;font-weight:600;margin-right:4px;">仓库：</span>';
+  h+='<span style="font-size:10px;color:#94a3b8;font-weight:600;margin-left:8px;">仓库：</span>';
   h+='<span class="region-tab active" onclick="filterByWarehouse(\''+region+'\',\'全部\',this)" style="font-size:10px;padding:5px 12px;">全部</span>';
   warehouses.forEach(w=>{
     h+='<span class="region-tab" onclick="filterByWarehouse(\''+region+'\',\''+w+'\',this)" style="font-size:10px;padding:5px 12px;">'+w+'</span>';
   });
   h+='</div>';
+
+  // ─── 卡片：各仓库日均人数 + ABCD等级分布（随月份变化）───
+  h+='<div id="regionCards">';
+  h+=buildRegionCards(region, dd, regionData);
+  h+='</div>';
   h+='<div class="table-card"><div class="table-wrap" style="max-height:520px;"><table style="width:100%;"><thead><tr><th>评级</th><th>合规</th><th>仓库</th><th>供应商</th><th>状态</th><th>日均人数</th><th>计时分拣工时薪</th><th>Markup</th><th>结算价</th><th>总分</th><th></th></tr></thead><tbody id="regionTableBody">';
+  // 按总分降序
+  dd=[...dd].sort((a,b)=>b['总分']-a['总分']);
   dd.forEach((r,i)=>{
     const sc=r['总分']>=80?'shi':r['总分']>=60?'smd':'slo';
     const rowId='regdet-'+region.replace(/[^a-zA-Z]/g,'')+'-'+i;
@@ -756,6 +744,115 @@ function switchRegion(region,el){
   // 存储当前区域数据用于仓库筛选
   window._currentRegionData=dd;
   window._currentRegion=region;
+  // 渲染5月vs6月对比趋势图 + 绑定月份按钮
+  setTimeout(()=>{
+    renderRegionTrendCharts(region);
+    bindMonthButtons(region);
+  },150);
+}
+
+function bindMonthButtons(region){
+  const months=D.months||['2026年5月'];
+  const cur=months.indexOf(currentMonth);
+  const prev=document.getElementById('btnPrevMonth');
+  const next=document.getElementById('btnNextMonth');
+  if(prev&&cur>0){
+    prev.onclick=function(){switchMonth(region,months[cur-1]);};
+  }
+  if(next&&cur<months.length-1){
+    next.onclick=function(){switchMonth(region,months[cur+1]);};
+  }
+}
+
+// ─── 构建中间卡片（随月份变化）───
+function buildRegionCards(region, dd, regionData){
+  const totalPpl=dd.reduce((s,r)=>s+r['日均使用人数'],0);
+  const totalSupp=[...new Set(dd.map(r=>r['供应商']))].length;
+  const ac=regionData?regionData.a_count:0, bc=regionData?regionData.b_count:0, cc=regionData?regionData.c_count:0, dc=regionData?regionData.d_count:0;
+  const maxGrade=Math.max(ac,bc,cc,dc,1);
+  let h='<div style="display:flex;gap:14px;margin-bottom:12px;">';
+  const whByWarehouse={};
+  dd.forEach(r=>{const w=r['仓库'];whByWarehouse[w]=(whByWarehouse[w]||0)+r['日均使用人数'];});
+  const whEntries=Object.entries(whByWarehouse).sort((a,b)=>b[1]-a[1]);
+  const maxWh=Math.max(...whEntries.map(e=>e[1]),1);
+  h+='<div style="flex:1;background:#fff;border:1px solid #e8ecf1;border-radius:10px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,0.04);">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
+  h+='<div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;font-weight:600;">👤 各仓库日均人数</div>';
+  h+='<div style="font-size:22px;font-weight:800;color:#2563eb;line-height:1;">'+FM(totalPpl)+'<span style="font-size:10px;color:#94a3b8;font-weight:500;"> 人</span></div></div>';
+  const barColors=['#3b82f6','#6366f1','#8b5cf6','#a855f7','#06b6d4','#0ea5e9','#2563eb','#4f46e5','#7c3aed','#0891b2'];
+  whEntries.forEach(([w,v],i)=>{
+    const pct=Math.round(v/maxWh*100);
+    h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
+    h+='<span style="width:50px;font-size:9.5px;font-weight:600;color:#475569;text-align:right;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;">'+w+'</span>';
+    h+='<div style="flex:1;height:26px;background:#f1f5f9;border-radius:8px;overflow:hidden;">';
+    h+='<div style="width:'+pct+'%;height:100%;background:'+barColors[i%barColors.length]+';border-radius:8px;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;transition:width .4s ease;min-width:fit-content;">';
+    h+='<span style="font-size:10px;color:#fff;font-weight:700;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,0.15);">'+FM(v)+'人</span></div></div></div>';
+  });
+  h+='</div>';
+  h+='<div style="flex:1;background:#fff;border:1px solid #e8ecf1;border-radius:10px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,0.04);">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
+  h+='<div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;font-weight:600;">🏢 ABCD等级分布</div>';
+  h+='<div style="font-size:22px;font-weight:800;color:#2563eb;line-height:1;">'+totalSupp+'<span style="font-size:10px;color:#94a3b8;font-weight:500;"> 家供应商</span></div></div>';
+  [{l:'A级',v:ac,c:'#10b981',bg:'#d1fae5',r:'≥80分'},{l:'B级',v:bc,c:'#3b82f6',bg:'#dbeafe',r:'60-79分'},{l:'C级',v:cc,c:'#f59e0b',bg:'#fef3c7',r:'40-59分'},{l:'D级',v:dc,c:'#ef4444',bg:'#fee2e2',r:'<40分'}].forEach(g=>{
+    const pct=maxGrade>0?Math.round(g.v/maxGrade*100):0;
+    h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">';
+    h+='<span style="width:24px;font-size:10px;font-weight:600;color:#475569;">'+g.l+'</span>';
+    h+='<span style="font-size:9px;color:#94a3b8;min-width:38px;">'+g.r+'</span>';
+    h+='<div style="flex:1;height:20px;background:'+g.bg+';border-radius:10px;overflow:hidden;">';
+    h+='<div style="width:'+pct+'%;height:100%;background:'+g.c+';border-radius:10px;transition:width .4s ease;"></div></div>';
+    h+='<span style="font-size:11px;font-weight:700;color:#1e293b;min-width:24px;text-align:right;">'+g.v+'</span></div>';
+  });
+  h+='</div></div>';
+  return h;
+}
+
+// ─── 5月vs6月对比趋势图（折线图）───
+let whTrendInst=null, gradeTrendInst=null;
+function renderRegionTrendCharts(region){
+  const mayDD=D.detail_by_region[region]||[];
+  const junDD=(D.detail_by_region_jun||{})[region]||[];
+
+  // ── 仓库人数柱状图：横轴=仓库，分组=5月/6月 ──
+  const allWH=[...new Set([...mayDD.map(r=>r['仓库']),...junDD.map(r=>r['仓库'])])].sort();
+  const mayWH={}, junWH={};
+  mayDD.forEach(r=>{mayWH[r['仓库']]=(mayWH[r['仓库']]||0)+r['日均使用人数'];});
+  junDD.forEach(r=>{junWH[r['仓库']]=(junWH[r['仓库']]||0)+r['日均使用人数'];});
+
+  const ctx1=document.getElementById('chWhTrend');
+  if(ctx1&&ctx1.clientWidth>0){
+    if(whTrendInst)whTrendInst.destroy();
+    whTrendInst=new Chart(ctx1,{type:'bar',data:{
+      labels:allWH,
+      datasets:[
+        {label:'5月',data:allWH.map(w=>mayWH[w]||0),backgroundColor:'#93c5fd',barPercentage:.7,borderRadius:{topLeft:3,topRight:3}},
+        {label:'6月',data:allWH.map(w=>junWH[w]||0),backgroundColor:'#3b82f6',barPercentage:.7,borderRadius:{topLeft:3,topRight:3}}
+      ]},options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:9},padding:10,usePointStyle:true,pointStyleWidth:8,boxWidth:8}},
+        tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': '+FM(ctx.raw)+'人'}}},
+        datalabels:{anchor:'end',align:'top',font:{size:9,weight:'600'},color:'#475569',formatter:function(v){return FM(v)}}},
+      scales:{y:{grid:{color:'#f3f4f6'},ticks:{callback:v=>FM(v),font:{size:9}},title:{display:true,text:'日均人数',font:{size:9}}},
+              x:{ticks:{font:{size:9}}}}}});
+  }
+
+  // ── ABCD等级柱状图：横轴=等级，分组=5月/6月 ──
+  const mayData=D.people_supplier_chart.find(r=>r.region===region);
+  const junData=(D.people_supplier_chart_jun||[]).find(r=>r.region===region);
+  const gradeLabels=['A级','B级','C级','D级'];
+  const ctx2=document.getElementById('chGradeTrend');
+  if(ctx2&&ctx2.clientWidth>0){
+    if(gradeTrendInst)gradeTrendInst.destroy();
+    gradeTrendInst=new Chart(ctx2,{type:'bar',data:{
+      labels:gradeLabels,
+      datasets:[
+        {label:'5月',data:[mayData?mayData.a_count:0,mayData?mayData.b_count:0,mayData?mayData.c_count:0,mayData?mayData.d_count:0],backgroundColor:'#93c5fd',barPercentage:.7,borderRadius:{topLeft:3,topRight:3}},
+        {label:'6月',data:[junData?junData.a_count:0,junData?junData.b_count:0,junData?junData.c_count:0,junData?junData.d_count:0],backgroundColor:'#3b82f6',barPercentage:.7,borderRadius:{topLeft:3,topRight:3}}
+      ]},options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:9},padding:10,usePointStyle:true,pointStyleWidth:8,boxWidth:8}},
+        tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': '+ctx.raw+'家'}}},
+        datalabels:{anchor:'end',align:'top',font:{size:9,weight:'600'},color:'#475569',formatter:function(v){return v}}},
+      scales:{y:{grid:{color:'#f3f4f6'},ticks:{font:{size:9}},title:{display:true,text:'供应商数',font:{size:9}}},
+              x:{ticks:{font:{size:9}}}}}});
+  }
 }
 
 // 渲染表格行（复用逻辑）
@@ -853,101 +950,10 @@ function filterByWarehouse(region, warehouse, el){
 }
 
 // 月份切换 - 重新渲染整个区域
-let currentMonth='2026年5月';
+let currentMonth='2026年6月';
 function switchMonth(region, month, el){
   currentMonth=month;
-  // 更新按钮高亮
-  const btns=el.parentElement.querySelectorAll('.region-tab');
-  btns.forEach(b=>b.classList.remove('active'));
-  el.classList.add('active');
-
-  // 根据月份选择数据源
-  let dd, regionData;
-  if(month==='2026年6月'){
-    dd=D.detail_by_region_jun[region]||[];
-    regionData=D.people_supplier_chart_jun.find(r=>r.region===region);
-  }else{
-    dd=D.detail_by_region[region]||[];
-    regionData=D.people_supplier_chart.find(r=>r.region===region);
-  }
-  window._currentRegionData=dd;
-  window._currentRegion=region;
-
-  // 重新渲染上面两个卡片
-  const totalPpl=dd.reduce((s,r)=>s+r['日均使用人数'],0);
-  const totalSupp=[...new Set(dd.map(r=>r['供应商']))].length;
-  const ac=regionData?regionData.a_count:0, bc=regionData?regionData.b_count:0, cc=regionData?regionData.c_count:0, dc=regionData?regionData.d_count:0;
-  const maxGrade=Math.max(ac,bc,cc,dc,1);
-
-  // 左栏 - 仓库人数进度条 + 总人数
-  const whByWarehouse={};
-  dd.forEach(r=>{const w=r['仓库'];whByWarehouse[w]=(whByWarehouse[w]||0)+r['日均使用人数'];});
-  const whEntries=Object.entries(whByWarehouse).sort((a,b)=>b[1]-a[1]);
-  const maxWh=Math.max(...whEntries.map(e=>e[1]),1);
-  const barColors=['#3b82f6','#6366f1','#8b5cf6','#a855f7','#06b6d4','#0ea5e9','#2563eb','#4f46e5','#7c3aed','#0891b2'];
-
-  // 更新左栏（第一个卡片）
-  const leftCard=document.querySelector('#regionContent > div > div:first-child');
-  if(leftCard){
-    let lh='<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;\">';
-    lh+='<div style=\"font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;font-weight:600;\">👤 各仓库日均人数</div>';
-    lh+='<div style=\"font-size:22px;font-weight:800;color:#2563eb;line-height:1;\">'+FM(totalPpl)+'<span style=\"font-size:10px;color:#94a3b8;font-weight:500;\"> 人</span></div></div>';
-    whEntries.forEach(([w,v],i)=>{
-      const pct=Math.round(v/maxWh*100);
-      const color=barColors[i%barColors.length];
-      lh+='<div style=\"display:flex;align-items:center;gap:10px;margin-bottom:8px;\">';
-      lh+='<span style=\"width:50px;font-size:9.5px;font-weight:600;color:#475569;text-align:right;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;\">'+w+'</span>';
-      lh+='<div style=\"flex:1;height:26px;background:#f1f5f9;border-radius:8px;overflow:hidden;\">';
-      lh+='<div style=\"width:'+pct+'%;height:100%;background:'+color+';border-radius:8px;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;transition:width .4s ease;min-width:fit-content;\">';
-      lh+='<span style=\"font-size:10px;color:#fff;font-weight:700;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,0.15);\">'+FM(v)+'人</span></div></div></div>';
-    });
-    leftCard.innerHTML=lh;
-  }
-
-  // 更新右栏（第二个卡片）- ABCD等级分布
-  const rightCard=document.querySelector('#regionContent > div > div:nth-child(2)');
-  if(rightCard){
-    let rh='<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;\">';
-    rh+='<div style=\"font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;font-weight:600;\">🏢 ABCD等级分布</div>';
-    rh+='<div style=\"font-size:22px;font-weight:800;color:#2563eb;line-height:1;\">'+totalSupp+'<span style=\"font-size:10px;color:#94a3b8;font-weight:500;\"> 家供应商</span></div></div>';
-    [{l:'A级',v:ac,c:'#10b981',bg:'#d1fae5',r:'≥80分'},{l:'B级',v:bc,c:'#3b82f6',bg:'#dbeafe',r:'60-79分'},{l:'C级',v:cc,c:'#f59e0b',bg:'#fef3c7',r:'40-59分'},{l:'D级',v:dc,c:'#ef4444',bg:'#fee2e2',r:'<40分'}].forEach(g=>{
-      const pct=maxGrade>0?Math.round(g.v/maxGrade*100):0;
-      rh+='<div style=\"display:flex;align-items:center;gap:8px;margin-bottom:8px;\">';
-      rh+='<span style=\"width:24px;font-size:10px;font-weight:600;color:#475569;\">'+g.l+'</span>';
-      rh+='<span style=\"font-size:9px;color:#94a3b8;min-width:38px;\">'+g.r+'</span>';
-      rh+='<div style=\"flex:1;height:20px;background:'+g.bg+';border-radius:10px;overflow:hidden;\">';
-      rh+='<div style=\"width:'+pct+'%;height:100%;background:'+g.c+';border-radius:10px;transition:width .4s ease;\"></div></div>';
-      rh+='<span style=\"font-size:11px;font-weight:700;color:#1e293b;min-width:24px;text-align:right;\">'+g.v+'</span></div>';
-    });
-    rightCard.innerHTML=rh;
-  }
-
-  // 排序并渲染表格
-  dd=[...dd].sort((a,b)=>b['总分']-a['总分']);
-  // 更新仓库按钮
-  const whContainer=document.getElementById('warehouseBtns');
-  if(whContainer){
-    const warehouses=[...new Set(dd.map(r=>r['仓库']))].sort();
-    whContainer.innerHTML='<span style=\"font-size:10px;color:#94a3b8;font-weight:600;margin-right:4px;\">仓库：</span>';
-    // 全部按钮
-    const allBtn=document.createElement('span');
-    allBtn.className='region-tab active';
-    allBtn.style.cssText='font-size:10px;padding:5px 12px;';
-    allBtn.textContent='全部';
-    allBtn.onclick=function(){filterByWarehouse(region,'全部',allBtn);};
-    whContainer.appendChild(allBtn);
-    // 各仓库按钮
-    warehouses.forEach(w=>{
-      const btn=document.createElement('span');
-      btn.className='region-tab';
-      btn.style.cssText='font-size:10px;padding:5px 12px;';
-      btn.textContent=w;
-      btn.onclick=function(){filterByWarehouse(region,w,btn);};
-      whContainer.appendChild(btn);
-    });
-  }
-  const tbody=document.getElementById('regionTableBody');
-  if(tbody)tbody.innerHTML=renderRegionTableRows(region, dd, 0);
+  renderRegionContent(region);
 }
 
 const radarInsts={};
