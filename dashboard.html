@@ -928,9 +928,9 @@ function renderRegionTableRows(region, data, startIdx){
       rows+='</div>';
     }
     rows+='</div></div>';
-    if(r['备注']||(r['合规标签']==='不合规'))rows+='<div style="padding:4px 0 0 18.5px;">';
-    if(r['备注'])rows+='<div style="font-size:11px;color:#64748b;text-align:left;">备注：'+r['备注']+'</div>';
-    if(r['合规标签']==='不合规')rows+='<div style="font-size:11px;color:#dc2626;text-align:left;">不合规：'+r['不合规原因']+'</div>';
+    if(r['备注']||(r['合规标签']==='不合规'))rows+='<div style=\"padding:4px 0 0 18.5px;\">';
+    if(r['备注'])rows+='<div style=\"font-size:11px;color:#64748b;text-align:left;\">备注：'+r['备注']+'</div>';
+    if(r['合规标签']==='不合规')rows+='<div style=\"font-size:11px;color:#dc2626;text-align:left;\">不合规：'+r['不合规原因']+'</div>';
     if(r['备注']||(r['合规标签']==='不合规'))rows+='</div>';
     rows+='</div></div></td></tr>';
   });
@@ -974,7 +974,8 @@ function toggleRegDet(region,i){
       const canvas=document.getElementById('radar-'+key);
       if(!canvas||canvas.clientWidth===0)return;
       if(radarInsts[key])radarInsts[key].destroy();
-      const dd=D.detail_by_region[region]||[];
+      // 根据当前月份选择数据源
+      const dd=currentMonth==='2026年6月'?(D.detail_by_region_jun[region]||[]):(D.detail_by_region[region]||[]);
       const r=dd[i]; if(!r)return;
       // Calculate deduction impact: 100 = no deduction, 0 = heavy deduction (≥50 total deduction)
       const dedTotal=Math.abs(parseInt(r['扣分汇总']?.match(/-?\d+/g)?.[0])||0);
@@ -1233,7 +1234,7 @@ async function exportRegionImage(){
   const allDets=content.querySelectorAll('.det');
   allDets.forEach(d=>d.style.display='table-row');
   if(region){
-    const dd=D.detail_by_region[region]||[];
+    const dd=currentMonth==='2026年6月'?(D.detail_by_region_jun[region]||[]):(D.detail_by_region[region]||[]);
     dd.forEach((r,i)=>{toggleRegDet(region,i);toggleRegDet(region,i);});
   }
   await new Promise(r=>setTimeout(r,1000));

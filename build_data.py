@@ -125,6 +125,7 @@ def process_month(df, df_summary, deduction_cols, deduction_labels, month_label,
             '扣分明细列表': ded_detail_list,
             '扣分总计': ded_total,
             '备注': remark,
+            'coi备注': coi_remark,
             '报价竞争力_pct': round(sf(row['报价竞争力']) * 100, 1),
             '派遣满足率_pct': round(sf(row['派遣满足率']) * 100, 1),
             '考勤准确率_pct': round(sf(row['考勤准确率']) * 100, 1),
@@ -394,13 +395,9 @@ for _, row in df_j.iterrows():
             val = int(float(v))
             ded_total += val
             ded_detail_list.append({'项目': label, '扣分': val})
-    # 备注取备注列，COI不合规备注单独显示
+    # 备注和COI分开存储
     remark = ss(row.get('备注', ''))
     coi_remark = ss(row.get('COI合规', ''))
-    if remark and coi_remark:
-        remark = remark + '；COI不合规：' + coi_remark
-    elif coi_remark:
-        remark = 'COI不合规：' + coi_remark
     detail_jun.append({
         '大区': row['大区'], '仓库': row['仓库'], '供应商': row['供应商'],
         '等级': row['等级'], '合规标签': row['合规标签'], '不合规原因': row['不合规原因'],
@@ -423,6 +420,7 @@ for _, row in df_j.iterrows():
         '扣分明细列表': ded_detail_list,
         '扣分总计': ded_total,
         '备注': remark,
+        'coi备注': coi_remark,
         '报价竞争力_pct': round(sf(row['报价竞争力']) * 100, 1),
         '派遣满足率_pct': round(sf(row['派遣满足率']) * 100, 1),
         '考勤准确率_pct': round(sf(row['考勤准确率']) * 100, 1),
