@@ -1244,7 +1244,7 @@ async function exportRegionImage(){
   wrapper.style.position='fixed';
   wrapper.style.top='0';
   wrapper.style.left='-9999px';
-  wrapper.style.width=content.offsetWidth+'px';
+  wrapper.style.width=Math.max(content.offsetWidth,900)+'px';
   wrapper.style.background='#f1f5f9';
   wrapper.style.zIndex='99999';
   wrapper.style.padding='20px 24px';
@@ -1266,7 +1266,8 @@ async function exportRegionImage(){
     el.style.overflow='visible';
     el.style.overflowY='visible';
   });
-  clone.querySelectorAll('canvas[id^="radar-"]').forEach(c=>{
+  // 替换所有canvas为图片（雷达图 + 趋势图）
+  clone.querySelectorAll('canvas').forEach(c=>{
     try{
       const origCanvas=document.getElementById(c.id);
       if(origCanvas){
@@ -1274,6 +1275,7 @@ async function exportRegionImage(){
         img.src=origCanvas.toDataURL('image/png');
         img.style.width=origCanvas.clientWidth+'px';
         img.style.height=origCanvas.clientHeight+'px';
+        img.setAttribute('data-capture-img','1');
         c.parentNode.replaceChild(img,c);
       }
     }catch(e){}
