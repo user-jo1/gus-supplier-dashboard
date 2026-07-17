@@ -82,7 +82,7 @@ function doLogin(){
   }
 
   const users=getUsers();
-  const user=users.find(u=>u.username===username&&(u.password===password||btoa(u.password)===password));
+  const user=users.find(u=>u.username===username&&(atob(u.password)===password||u.password===password));
 
   if(!user){
     errorEl.textContent='账号或密码错误，请重试';
