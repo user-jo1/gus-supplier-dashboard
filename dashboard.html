@@ -303,6 +303,15 @@ td.sup{max-width:130px;white-space:normal;text-align:left;font-weight:600}
 <script>
 // 注册 datalabels 插件
 Chart.register(ChartDataLabels);
+// ─── 缓存破坏：版本不匹配时强制刷新 ───
+var DASHBOARD_VERSION='20260717_1';
+var cachedVer=sessionStorage.getItem('dash_ver');
+if(cachedVer&&cachedVer!==DASHBOARD_VERSION){
+  sessionStorage.setItem('dash_ver',DASHBOARD_VERSION);
+  location.reload(true);
+}else{
+  sessionStorage.setItem('dash_ver',DASHBOARD_VERSION);
+}
 // ─── 权限校验 ───
 (function(){
   const authStr=sessionStorage.getItem('gus_auth');
