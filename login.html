@@ -58,7 +58,7 @@ const DEFAULT_USERS=[
 ];
 
 // 初始化用户数据（版本号控制，更新DEFAULT_USERS时递增版本号）
-const USERS_VERSION=3;
+const USERS_VERSION=4;
 const storedVersion=parseInt(localStorage.getItem('gus_users_version')||'0');
 if(!localStorage.getItem('gus_users')||storedVersion<USERS_VERSION){
   localStorage.setItem('gus_users',JSON.stringify(DEFAULT_USERS));
@@ -66,8 +66,17 @@ if(!localStorage.getItem('gus_users')||storedVersion<USERS_VERSION){
 }
 
 function getUsers(){
-  try{return JSON.parse(localStorage.getItem('gus_users'))||DEFAULT_USERS}
-  catch(e){return DEFAULT_USERS}
+  try{
+    var users=JSON.parse(localStorage.getItem('gus_users'))||DEFAULT_USERS;
+    // 确保所有用户有hash字段，兼容旧格式
+    for(var i=0;i<users.length;i++){
+      if(!users[i].hash&&users[i].password){
+        var def=DEFAULT_USERS.find(function(d){return d.username===users[i].username;});
+        if(def)users[i].hash=def.hash;
+      }
+    }
+    return users;
+  }catch(e){return DEFAULT_USERS}
 }
 
 function doLogin(){
@@ -83,7 +92,7 @@ function doLogin(){
 
   const users=getUsers();
   const inputHash=sha256(password);
-  const user=users.find(u=>u.username===username&&(u.hash===inputHash||u.password===password||(u.hash&&u.hash===inputHash)));
+  const user=users.find(u=>u.username===username&&(u.hash===inputHash));
 
   if(!user){
     errorEl.textContent='账号或密码错误，请重试';

@@ -95,7 +95,7 @@ const DEFAULT_USERS=[
   {username:'ADMIN',hash:'64e48f3bf07307f751c02213b95e0b5e1e8351597dfbe12bce5cbf115591ce3f',role:'viewer',regions:'FL 佛州大区,GL 大湖大区,MS 中南大区,NE 东北大区,TX 德州大区,WE 美西大区,Ground项目部',label:'全美明细权限'},
 ];
 
-const USERS_VERSION=3;
+const USERS_VERSION=4;
 if(!localStorage.getItem('gus_users')||parseInt(localStorage.getItem('gus_users_version')||'0')<USERS_VERSION){
   saveUsers(DEFAULT_USERS);
   localStorage.setItem('gus_users_version',String(USERS_VERSION));
