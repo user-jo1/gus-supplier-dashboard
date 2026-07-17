@@ -46,15 +46,15 @@ if(cv&&cv!==LOGIN_VERSION){sessionStorage.setItem('login_ver',LOGIN_VERSION);loc
 else{sessionStorage.setItem('login_ver',LOGIN_VERSION);}
 // ─── 账号配置（仅管理员可管理，存储在 localStorage）───
 const DEFAULT_USERS=[
-  {username:'admin', password:'gus2026', role:'admin', regions:'*', label:'管理员'},
-  {username:'fl', password:'gusfl2026', role:'viewer', regions:'FL 佛州大区', label:'佛州大区'},
-  {username:'gl', password:'glgl2026', role:'viewer', regions:'GL 大湖大区', label:'大湖大区'},
-  {username:'ms', password:'msgus2026', role:'viewer', regions:'MS 中南大区', label:'中南大区'},
-  {username:'ne', password:'nenene2026', role:'viewer', regions:'NE 东北大区', label:'东北大区'},
-  {username:'tx', password:'gustx26', role:'viewer', regions:'TX 德州大区', label:'德州大区'},
-  {username:'we', password:'guswe2626', role:'viewer', regions:'WE 美西大区', label:'美西大区'},
-  {username:'ground', password:'og2026', role:'viewer', regions:'Ground项目部', label:'Ground项目部'},
-  {username:'ADMIN', password:'ADMIN2026', role:'viewer', regions:'FL 佛州大区,GL 大湖大区,MS 中南大区,NE 东北大区,TX 德州大区,WE 美西大区,Ground项目部', label:'全美明细权限'},
+  {username:'admin', password:'Z3VzMjAyNg==', role:'admin', regions:'*', label:'管理员'},
+  {username:'fl', password:'Z3VzZmwyMDI2', role:'viewer', regions:'FL 佛州大区', label:'佛州大区'},
+  {username:'gl', password:'Z2xnbDIwMjY=', role:'viewer', regions:'GL 大湖大区', label:'大湖大区'},
+  {username:'ms', password:'bXNndXMyMDI2', role:'viewer', regions:'MS 中南大区', label:'中南大区'},
+  {username:'ne', password:'bmVuZW5lMjAyNg==', role:'viewer', regions:'NE 东北大区', label:'东北大区'},
+  {username:'tx', password:'Z3VzdHgyNg==', role:'viewer', regions:'TX 德州大区', label:'德州大区'},
+  {username:'we', password:'Z3Vzd2UyNjI2', role:'viewer', regions:'WE 美西大区', label:'美西大区'},
+  {username:'ground', password:'b2cyMDI2', role:'viewer', regions:'Ground项目部', label:'Ground项目部'},
+  {username:'ADMIN', password:'QURNSU4yMDI2', role:'viewer', regions:'FL 佛州大区,GL 大湖大区,MS 中南大区,NE 东北大区,TX 德州大区,WE 美西大区,Ground项目部', label:'全美明细权限'},
 ];
 
 // 初始化用户数据（版本号控制，更新DEFAULT_USERS时递增版本号）
@@ -82,7 +82,7 @@ function doLogin(){
   }
 
   const users=getUsers();
-  const user=users.find(u=>u.username===username&&u.password===password);
+  const user=users.find(u=>u.username===username&&(u.password===password||btoa(u.password)===password));
 
   if(!user){
     errorEl.textContent='账号或密码错误，请重试';

@@ -84,15 +84,15 @@ const ALL_REGIONS=['FL 佛州大区','GL 大湖大区','MS 中南大区','NE 东
 })();
 
 const DEFAULT_USERS=[
-  {username:'admin',password:'gus2026',role:'admin',regions:'*',label:'管理员'},
-  {username:'fl',password:'gusfl2026',role:'viewer',regions:'FL 佛州大区',label:'佛州大区'},
-  {username:'gl',password:'glgl2026',role:'viewer',regions:'GL 大湖大区',label:'大湖大区'},
-  {username:'ms',password:'msgus2026',role:'viewer',regions:'MS 中南大区',label:'中南大区'},
-  {username:'ne',password:'nenene2026',role:'viewer',regions:'NE 东北大区',label:'东北大区'},
-  {username:'tx',password:'gustx26',role:'viewer',regions:'TX 德州大区',label:'德州大区'},
-  {username:'we',password:'guswe2626',role:'viewer',regions:'WE 美西大区',label:'美西大区'},
-  {username:'ground',password:'og2026',role:'viewer',regions:'Ground项目部',label:'Ground项目部'},
-  {username:'ADMIN',password:'ADMIN2026',role:'viewer',regions:'FL 佛州大区,GL 大湖大区,MS 中南大区,NE 东北大区,TX 德州大区,WE 美西大区,Ground项目部',label:'全美明细权限'},
+  {username:'admin',password:'Z3VzMjAyNg==',role:'admin',regions:'*',label:'管理员'},
+  {username:'fl',password:'Z3VzZmwyMDI2',role:'viewer',regions:'FL 佛州大区',label:'佛州大区'},
+  {username:'gl',password:'Z2xnbDIwMjY=',role:'viewer',regions:'GL 大湖大区',label:'大湖大区'},
+  {username:'ms',password:'bXNndXMyMDI2',role:'viewer',regions:'MS 中南大区',label:'中南大区'},
+  {username:'ne',password:'bmVuZW5lMjAyNg==',role:'viewer',regions:'NE 东北大区',label:'东北大区'},
+  {username:'tx',password:'Z3VzdHgyNg==',role:'viewer',regions:'TX 德州大区',label:'德州大区'},
+  {username:'we',password:'Z3Vzd2UyNjI2',role:'viewer',regions:'WE 美西大区',label:'美西大区'},
+  {username:'ground',password:'b2cyMDI2',role:'viewer',regions:'Ground项目部',label:'Ground项目部'},
+  {username:'ADMIN',password:'QURNSU4yMDI2',role:'viewer',regions:'FL 佛州大区,GL 大湖大区,MS 中南大区,NE 东北大区,TX 德州大区,WE 美西大区,Ground项目部',label:'全美明细权限'},
 ];
 
 const USERS_VERSION=3;
@@ -155,7 +155,8 @@ function renderUserTable(){
 function togglePw(idx){
   const el=document.getElementById('pw-'+idx);
   if(!el)return;
-  const pw=el.getAttribute('data-pw');
+  var pw=el.getAttribute('data-pw');
+  try{pw=atob(pw);}catch(e){}
   if(el.textContent==='●●●●●●'){
     el.textContent=pw;
     el.style.color='#dc2626';
