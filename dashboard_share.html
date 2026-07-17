@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>GUS 劳务供应商管理看板</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" onerror="document.body.innerHTML='<div style=\"padding:40px;text-align:center;color:#dc2626;\"><h2>Chart.js 加载失败</h2><p>请检查网络连接，CDN (jsdelivr.net) 可能不可达</p></div>'"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:#f1f5f9;color:#1e293b;min-height:100vh;display:flex;flex-direction:column}
+
+/* ── Top Bar ── */
+.topbar{background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);color:#fff;padding:0 28px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 16px rgba(15,23,42,0.15);position:fixed;top:0;left:0;right:0;z-index:200;height:52px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.topbar h1{font-size:17px;font-weight:700;letter-spacing:.3px;display:flex;align-items:center;gap:8px}
+.topbar h1::before{content:'📊';font-size:18px}
+.topbar .right{font-size:10px;color:rgba(255,255,255,0.45);font-weight:500;letter-spacing:.3px}
+
+/* ── Layout ── */
+.layout{display:flex;margin-top:52px;min-height:calc(100vh - 52px)}
+.sidebar{width:200px;background:#fff;border-right:1px solid #e8ecf1;padding:16px 0;flex-shrink:0;position:fixed;top:52px;left:0;bottom:0;z-index:150;overflow-y:auto;box-shadow:2px 0 12px rgba(0,0,0,0.03)}
+.sidebar .sg{font-size:9px;text-transform:uppercase;color:#94a3b8;padding:12px 20px 6px;letter-spacing:1.2px;font-weight:700}
+.sidebar a{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:12.5px;color:#475569;cursor:pointer;text-decoration:none;font-weight:500;border-left:3px solid transparent;transition:all .2s ease;margin:1px 0;border-radius:0 6px 6px 0;margin-right:8px}
+.sidebar a:hover{color:#2563eb;background:rgba(37,99,235,0.05);border-left-color:#93c5fd}
+.sidebar a.active{color:#1d4ed8;font-weight:700;background:linear-gradient(90deg,rgba(37,99,235,0.08),transparent);border-left-color:#2563eb}
+.sidebar a .dot{margin-left:auto;width:7px;height:7px;border-radius:50%;background:#ef4444;box-shadow:0 0 6px rgba(239,68,68,0.4);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.sidebar-footer{padding:14px 20px;font-size:9px;color:#cbd5e1;border-top:1px solid #f1f5f9;margin-top:auto}
+
+.main{margin-left:200px;flex:1;padding:20px 28px 32px;max-width:calc(100vw - 200px)}
+.page{display:none}
+.page.active{display:block;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Stat Cards ── */
+.stat-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+.stat-card{background:#fff;border:1px solid #e8ecf1;border-radius:10px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,0.04);transition:all .25s ease;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:transparent;transition:background .25s ease;border-radius:10px 10px 0 0}
+.stat-card:hover{border-color:#cbd5e1;box-shadow:0 6px 20px rgba(0,0,0,0.06);transform:translateY(-2px)}
+.stat-card.p::before{background:#3b82f6}
+.stat-card.s::before{background:#10b981}
+.stat-card.d::before{background:#ef4444}
+.stat-card.w::before{background:#f59e0b}
+.stat-card .lbl{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;font-weight:600}
+.stat-card .val{font-size:28px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat-card .sub{font-size:10px;color:#94a3b8;margin-top:4px;line-height:1.4}
+.stat-card.p .val{color:#2563eb}
+.stat-card.s .val{color:#059669}
+.stat-card.d .val{color:#dc2626}
+.stat-card.w .val{color:#d97706}
+
+/* ── Charts ── */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.chart-card{background:#fff;border:1px solid #e8ecf1;border-radius:10px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,0.04);transition:box-shadow .2s}
+.chart-card:hover{box-shadow:0 4px 14px rgba(0,0,0,0.06)}
+.chart-card h3{font-size:12px;font-weight:700;margin-bottom:10px;color:#0f172a;letter-spacing:.2px;display:flex;align-items:center;gap:6px}
+.chart-card h3::before{content:'';width:3px;height:14px;background:#3b82f6;border-radius:2px;display:inline-block}
+.chart-wrap{height:290px}
+
+/* ── Tables ── */
+.table-card{background:#fff;border:1px solid #e8ecf1;border-radius:10px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,0.04);overflow:hidden}
+.table-card>h3{padding:12px 18px;font-size:12px;font-weight:700;border-bottom:1px solid #e8ecf1;background:#f8fafc;display:flex;align-items:center;gap:6px;letter-spacing:.2px}
+.table-card>h3::before{content:'';width:3px;height:14px;background:#8b5cf6;border-radius:2px;display:inline-block}
+.filter-bar{display:flex;gap:10px;padding:10px 18px;border-bottom:1px solid #e8ecf1;flex-wrap:wrap;align-items:center;background:#fafbfc}
+.filter-bar select{padding:6px 28px 6px 12px;border:1px solid #dde1e7;border-radius:6px;font-size:11px;background:#fff url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E\") no-repeat right 10px center;min-width:120px;cursor:pointer;appearance:none;-webkit-appearance:none;font-weight:500;color:#334155;transition:all .2s}
+.filter-bar select:hover{border-color:#94a3b8}
+.filter-bar select:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,0.1)}
+.filter-bar .fl{font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:600;letter-spacing:.5px}
+.table-wrap{overflow-x:auto;max-height:480px}
+table{width:max-content;min-width:100%;border-collapse:collapse;font-size:11px}
+th{background:#f1f5f9;padding:9px 8px;text-align:center;font-weight:600;color:#475569;white-space:nowrap;border-bottom:2px solid #e2e8f0;font-size:10px;position:sticky;top:0;z-index:5;letter-spacing:.2px}
+td{padding:8px 8px;border-bottom:1px solid #f1f5f9;white-space:nowrap;text-align:center;font-size:11px;color:#334155}
+tr:hover td{background:rgba(59,130,246,0.03)}
+td.l{text-align:left}
+td.r{text-align:right;font-variant-numeric:tabular-nums}
+td.note{font-size:10px;color:#64748b;max-width:170px;white-space:normal;text-align:left;line-height:1.5}
+td.wrh{max-width:80px;white-space:normal;text-align:left}
+td.sup{max-width:130px;white-space:normal;text-align:left;font-weight:600}
+
+/* ── Badges ── */
+.badge{display:inline-block;padding:2px 8px;border-radius:5px;font-size:9.5px;font-weight:700;letter-spacing:.3px;line-height:1.4}
+.badge-A{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0}
+.badge-B{background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe}
+.badge-C{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
+.badge-D{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
+.shi{color:#059669;font-weight:700}
+.smd{color:#2563eb;font-weight:600}
+.slo{color:#dc2626;font-weight:700}
+.nc{color:#d97706;font-weight:700}
+
+/* ── Expandable Rows ── */
+.erow{cursor:pointer}
+.erow:hover td{background:rgba(59,130,246,0.04)!important}
+.det td{background:#fafbfc!important;padding:0;border-bottom:2px solid #e2e8f0}
+.dg{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;margin:10px 16px}
+.di{display:flex;justify-content:space-between;padding:8px 12px;background:#fff;border-radius:6px;font-size:11px;border:1px solid #e8ecf1;transition:border-color .15s}
+.di:hover{border-color:#cbd5e1}
+.di .dn{color:#475569;font-weight:500}
+.di .dv{color:#dc2626;font-weight:700}
+.di .dv.ok{color:#059669}
+.ded{color:#b45309;font-weight:600;margin:0 16px 6px;font-size:10.5px;line-height:1.5}
+
+/* ── Noncompliant Cards ── */
+.cc{background:#fff;border:1px solid #e8ecf1;border-radius:10px;padding:16px 18px;margin-bottom:10px;display:flex;gap:14px;box-shadow:0 1px 4px rgba(0,0,0,0.03);transition:all .2s;border-left:3px solid #f59e0b}
+.cc:hover{box-shadow:0 4px 14px rgba(0,0,0,0.06);border-left-color:#ef4444}
+.cc .ci{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#fef3c7,#fde68a);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.cc .ct{flex:1}
+.cc .cn{font-weight:700;font-size:12.5px;margin-bottom:4px;color:#0f172a}
+.cc .cd{font-size:10.5px;color:#475569;line-height:1.6;margin-bottom:4px}
+.cc .ca{font-size:10.5px;color:#d97706;font-weight:700;margin-top:6px;background:#fffbeb;padding:6px 10px;border-radius:6px;display:inline-block}
+
+/* ── Strategy Tables ── */
+.stab{width:100%;border-collapse:collapse;font-size:11px}
+.stab th{background:#f1f5f9;padding:10px 12px;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;font-size:10px;position:static;letter-spacing:.2px}
+.stab td{padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:11px;color:#334155}
+
+/* ── Strategy Cards ── */
+.stg-card{background:#fff;border:1px solid #e8ecf1;border-radius:10px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,0.04);transition:box-shadow .2s}
+.stg-card:hover{box-shadow:0 4px 14px rgba(0,0,0,0.06)}
+.stg-card h3{font-size:12px;font-weight:700;margin-bottom:10px;color:#0f172a;letter-spacing:.2px;display:flex;align-items:center;gap:6px}
+.stg-card h3::before{content:'';width:3px;height:14px;background:#8b5cf6;border-radius:2px;display:inline-block}
+.stg-card p,.stg-card li{font-size:11px;color:#475569;line-height:1.7;margin-bottom:3px}
+.stg-card ul{padding-left:18px}
+.stg-card ul li{margin-bottom:5px}
+.stg-card ul li::marker{color:#8b5cf6}
+.stg-card .note{font-size:10px;color:#94a3b8;margin-top:6px;line-height:1.6}
+
+/* ── Region Tabs ── */
+.region-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.region-tab{padding:7px 16px;border-radius:20px;border:1.5px solid #e2e8f0;font-size:11px;cursor:pointer;color:#475569;background:#fff;font-weight:600;transition:all .2s ease;letter-spacing:.2px}
+.region-tab:hover{border-color:#93c5fd;color:#2563eb;background:#f8faff;box-shadow:0 2px 8px rgba(37,99,235,0.08)}
+.region-tab.active{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border-color:#2563eb;font-weight:700;box-shadow:0 2px 10px rgba(37,99,235,0.25)}
+
+/* ── Mini Stats ── */
+.stat-mini{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.stat-mini .sm{background:#fff;border-radius:8px;padding:12px 14px;text-align:center;border:1px solid #e8ecf1;box-shadow:0 1px 3px rgba(0,0,0,0.03);transition:all .2s}
+.stat-mini .sm:hover{border-color:#cbd5e1;box-shadow:0 3px 10px rgba(0,0,0,0.05);transform:translateY(-1px)}
+.stat-mini .sm .v{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.stat-mini .sm .l{font-size:10px;color:#94a3b8;margin-top:3px;font-weight:500;letter-spacing:.2px}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#94a3b8}
+
+@media(max-width:1200px){.charts-row{grid-template-columns:1fr}.stat-cards{grid-template-columns:1fr 1fr}}
+@media(max-width:768px){.stat-cards{grid-template-columns:1fr}.sidebar{width:150px}.main{margin-left:150px;max-width:calc(100vw-150px)}}
+@media print{
+  .sidebar,.topbar .right button,#crossChart,#crossAnalysis{display:none!important}
+  .topbar{position:static;height:auto;padding:8px 28px;background:#0f172a!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .layout{margin-top:0}
+  .main{margin-left:0!important;max-width:100%!important;padding:12px}
+  .page{display:block!important;page-break-inside:avoid;margin-bottom:20px}
+  .table-wrap{max-height:none!important;overflow:visible!important}
+  .charts-row{grid-template-columns:1fr 1fr}
+  .chart-wrap{height:240px}
+  canvas{max-width:100%}
+  @page{size:A4 landscape;margin:8mm}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar"><h1>GUS 劳务供应商管理看板</h1><div class="right"><span style="margin-right:16px;font-size:11px;color:rgba(255,255,255,0.6);">数据周期：2026年5月</span><button onclick="exportHTML()" style="padding:6px 14px;border:1px solid rgba(255,255,255,0.3);border-radius:6px;background:rgba(255,255,255,0.1);color:#fff;font-size:11px;cursor:pointer;font-weight:600;margin-right:8px;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">📄 导出HTML</button><button onclick="exportPDF()" style="padding:6px 14px;border:1px solid rgba(255,255,255,0.3);border-radius:6px;background:rgba(255,255,255,0.1);color:#fff;font-size:11px;cursor:pointer;font-weight:600;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">🖨️ 导出PDF</button></div></div>
+
+<div class="layout">
+<aside class="sidebar">
+  <div class="sg">核心看板</div>
+  <a class="active" onclick="showPage('overview',this)">📊 汇总看板</a>
+  <a onclick="showPage('regions',this)">📋 各区明细</a>
+  <div class="sg">专题分析</div>
+  <a onclick="showPage('cost',this)">💰 成本分析</a>
+  <a onclick="showPage('compliance',this)">🛡️ 合规分析<span class="dot"></span></a>
+  <a onclick="showPage('risk',this)">⚠️ 风险预警<span class="dot"></span></a>
+  <div class="sidebar-footer">© 2026 GUS</div>
+</aside>
+
+<main class="main">
+
+<!-- ===== 汇总看板 ===== -->
+<div class="page active" id="pg-overview">
+<div class="stat-cards">
+  <div class="stat-card p"><div class="lbl">日均用工总人数</div><div class="val" id="v1">-</div><div class="sub">全美仓库劳务工</div></div>
+  <div class="stat-card"><div class="lbl">日均用工总人次</div><div class="val" id="v2">-</div><div class="sub">总工时÷22÷8</div></div>
+  <div class="stat-card"><div class="lbl">总工时</div><div class="val" id="v3">-</div><div class="sub">小时</div></div>
+  <div class="stat-card"><div class="lbl">总成本</div><div class="val" id="v4">-</div><div class="sub">计时+计件</div></div>
+</div>
+<div class="stat-cards">
+  <div class="stat-card"><div class="lbl">供应商总数（去重）</div><div class="val" id="v5">-</div><div class="sub" id="v5s"></div></div>
+  <div class="stat-card s"><div class="lbl">A级供应商数</div><div class="val" id="v6">-</div><div class="sub" id="v6s"></div><div class="sub" id="v6pct" style="color:#059669;font-weight:600;"></div></div>
+  <div class="stat-card d"><div class="lbl">D级供应商数</div><div class="val" id="v7">-</div><div class="sub" id="v7s"></div><div class="sub" id="v7pct" style="color:#dc2626;font-weight:600;"></div></div>
+  <div class="stat-card w"><div class="lbl">COI不合规供应商</div><div class="val" id="v8">-</div><div class="sub" id="v8s"></div><div class="sub" id="v8pct" style="color:#d97706;font-weight:600;"></div></div>
+</div>
+
+<div class="charts-row">
+  <div class="chart-card"><h3>各区域用工成本 · 总工时趋势</h3><div class="chart-wrap"><canvas id="chCost"></canvas></div></div>
+  <div class="chart-card"><h3>各区域日均人数 · 供应商合规分布</h3><div class="chart-wrap"><canvas id="chPeople"></canvas></div></div>
+</div>
+
+<div class="table-card"><h3>供应商数据汇总</h3>
+<div class="filter-bar">
+  <span class="fl">大区</span><select id="fReg" onchange="rst()"><option value="">全部大区</option></select>
+  <span class="fl">等级</span><select id="fGrd" onchange="rst()"><option value="">全部</option><option value="A">A级</option><option value="B">B级</option><option value="C">C级</option><option value="D">D级</option></select>
+  <span class="fl">合规</span><select id="fCmp" onchange="rst()"><option value="">全部</option><option value="合规">合规</option><option value="不合规">不合规</option></select>
+</div>
+<div class="table-wrap"><table><thead><tr><th>评级</th><th>合规</th><th>大区</th><th>供应商</th><th>仓库</th><th>日均人数</th><th>人数占比%</th><th>时薪</th><th>Markup</th><th>结算价</th><th>总分</th><th>得分分析</th></tr></thead><tbody id="stb"></tbody></table></div>
+</div>
+
+<div class="table-card"><h3>同供应商跨区域表现对比 · 点击供应商查看图表</h3><div class="table-wrap" style="max-height:300px;"><table><thead><tr><th>供应商</th><th>大区</th><th>评级</th><th>日均人数</th><th>总分</th><th>时薪</th><th>Markup</th><th>结算价</th></tr></thead><tbody id="crossTb"></tbody></table></div><div id="crossChart" style="display:none;padding:8px 14px;border-top:1px solid #dde1e7;"><div style="display:flex;gap:12px;align-items:flex-start;"><div class="chart-wrap" style="flex:1;height:240px;"><canvas id="chCross"></canvas></div><div id="crossAnalysis" style="width:240px;flex-shrink:0;font-size:11px;color:#475569;line-height:1.7;"></div></div></div></div>
+</div>
+
+<!-- ===== 各区明细（按区域子界面） ===== -->
+<div class="page" id="pg-regions">
+<div class="region-tabs" id="regionTabs"></div>
+<div id="regionContent"></div>
+</div>
+
+<!-- ===== 成本分析 ===== -->
+<div class="page" id="pg-cost">
+<div class="charts-row">
+  <div class="chart-card"><h3>各区域成本与用工量</h3><div class="chart-wrap" style="height:310px;"><canvas id="chCost2"></canvas></div></div>
+  <div class="chart-card"><h3>各区域利润空间对比</h3><div class="chart-wrap" style="height:310px;"><canvas id="chProfit"></canvas></div></div>
+</div>
+
+<div class="stg-card"><h3>利润空间估算（按州实际政策）</h3>
+<p class="note">利润空间 = 结算价 − 时薪 − 雇主成本（WC保险+雇主税+管理费，按各州实际费率）</p>
+<p class="note" style="font-size:9.5px;line-height:1.5;">
+雇主成本=FICA 7.65%(SS 6.2%+Medicare 1.45%)+FUTA 0.6%+SUTA 2-3%+WC 2-4%+管理运营 2-3%。FL≈15% | IL/OH≈16% | TX≈14% | CA≈18% | CO≈16% | WA≈17% | NJ/NY≈17% | GA/NC≈15%
+</p>
+<div class="table-wrap" style="max-height:300px;"><table><thead><tr><th>大区</th><th>日均人数</th><th>平均时薪</th><th>平均结算价</th><th>Markup</th><th>雇主成本率</th><th>雇主成本</th><th>利润/h</th><th>利润率</th><th>降价建议</th></tr></thead><tbody id="profitTb"></tbody></table></div></div>
+
+<div class="stg-card"><h3>阶梯降价对照表（用工量 × 利润率 → 降价比例）</h3>
+<p class="note"><b>公式：降价% = 用工量阶梯 × 利润率区间</b>。下降比例每次2%：≥200人起点降8%，每降一档减2%。年节省=月成本×12×降价%。</p>
+<div class="table-wrap" style="max-height:300px;"><table class="stab" id="ladderMatrixTb"><thead><tr><th>用量阶梯</th><th>利润率 ≥20%</th><th>10%-20%</th><th>5%-10%</th><th>0%-5%</th><th>&lt;0%（需核查）</th><th>供应商数</th><th>当月成本</th><th>预计年节省</th></tr></thead><tbody id="ladderMatrixBody"></tbody></table></div>
+</div>
+
+<div class="stg-card"><h3>供应商成本结构 &amp; 谈价策略明细</h3>
+<p class="note">成本结构：结算价 = 时薪 + 雇主成本(WC+税+管理) + 测算利润。同一供应商不同大区/仓库的结算价不同，谈价策略也不同。降价比例 = 用工量阶梯 × 利润率矩阵。</p>
+<div class="table-wrap" style="max-height:520px;"><table><thead><tr><th>#</th><th>供应商</th><th>大区</th><th>仓库</th><th>日均人数</th><th>结算价</th><th>时薪</th><th>雇主成本</th><th>测算利润/h</th><th>测算利润率</th><th>降价%</th><th>当月成本</th><th>预计年节省</th><th>谈价逻辑</th></tr></thead><tbody id="negoTb"></tbody></table></div></div>
+</div>
+
+<!-- ===== 合规分析 ===== -->
+<div class="page" id="pg-compliance">
+<div class="charts-row">
+  <div class="chart-card"><h3>COI合规状态分布</h3><div class="chart-wrap" style="height:260px;"><canvas id="chCOI"></canvas></div></div>
+  <div class="chart-card"><h3>各区域不合规供应商分布</h3><div class="chart-wrap" style="height:260px;"><canvas id="chNonCompByRegion"></canvas></div></div>
+</div>
+
+<div class="stg-card"><h3>合规管理策略</h3>
+<ul>
+  <li><strong>月度第三方COI核查：</strong>引入保险验证平台（如邦宁）每月核查全部供应商COI状态</li>
+  <li><strong>到期前30天预警：</strong>自动提醒供应商更新COI</li>
+  <li><strong>新供应商准入：</strong>COI验证不通过不予准入</li>
+  <li><strong>不合规限期整改：</strong>发现后2周内完成整改，暂停新业务分配直至合规</li>
+</ul></div>
+
+<div class="stg-card"><h3>不合规供应商清单</h3><div id="noncompliantCards"></div></div>
+
+<div class="table-card"><h3>保险合规进度</h3><div class="table-wrap" style="max-height:380px;"><table><thead><tr><th>区域</th><th>供应商</th><th>存在问题</th><th>反馈进度</th><th>区长知悉</th><th>责任人</th><th>DDL</th></tr></thead><tbody id="insTb"></tbody></table></div></div>
+</div>
+
+<!-- ===== 风险预警 ===== -->
+<div class="page" id="pg-risk">
+<div class="stat-cards" style="grid-template-columns:1fr 1fr 1fr;">
+  <div class="stat-card d" id="cardLowScore"><div class="lbl">高风险(&lt;50分)</div><div class="val">-</div></div>
+  <div class="stat-card w" id="cardDeduction"><div class="lbl">有扣分记录</div><div class="val">-</div></div>
+  <div class="stat-card" id="accidentCard"><div class="lbl">库内安全事故</div><div class="val">-</div></div>
+</div>
+
+<div class="charts-row">
+  <div class="chart-card"><h3>各等级供应商分布</h3><div class="chart-wrap" style="height:260px;"><canvas id="chGrade"></canvas></div></div>
+  <div class="chart-card"><h3>供应商得分分布</h3><div class="chart-wrap" style="height:260px;"><canvas id="chScoreDist"></canvas></div></div>
+</div>
+
+<div class="stg-card"><h3>高风险供应商清单（总分 &lt; 50）</h3><div class="table-wrap" style="max-height:400px;"><table><thead><tr><th>大区</th><th>仓库</th><th>供应商</th><th>总分</th><th>扣分</th><th>扣分明细</th><th>建议</th></tr></thead><tbody id="highRiskTb"></tbody></table></div></div>
+
+<div class="stg-card"><h3>风险应对策略</h3>
+<ul>
+  <li>高风险供应商列入重点监控名单，月度跟踪</li>
+  <li>扣分项目建立专项改进计划，明确整改时限</li>
+  <li>安全事故零容忍，暂停新增派遣直至整改完成</li>
+  <li><strong>所有整改方案需与区域区长确认，业务优先</strong></li>
+</ul></div>
+
+<div class="stg-card"><h3>风险监控方向</h3>
+<ul>
+  <li>建立评分预警线（总分&lt;50自动预警）</li>
+  <li>定期回顾扣分趋势，识别系统性问题</li>
+  <li>整改进度由区域区长和HRBP联合跟踪</li>
+</ul></div>
+</div>
+
+</main>
+</div>
+
+<script>
+const FM=n=>n.toLocaleString('en-US');
+const FD=n=>'$'+n.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+let D={"kpi": {"daily_avg_people": 3270, "daily_avg_trips": 5585, "total_hours": 982908, "total_cost": 21273560, "total_cost_time": 18934713, "total_cost_piece": 2338847, "total_supplier_count": 41, "total_records": 67, "a_suppliers": 9, "a_pct": "11/67", "d_suppliers": 8, "d_pct": "13/67", "coi_noncompliant": 7, "coi_pct": "7/41"}, "cost_chart": [{"region": "FL 佛州大区", "time_cost": 2045625.86, "piece_cost": 0.0, "total_cost": 2045625.86, "total_hours": 114096.11, "daily_people": 414.0}, {"region": "GL 大湖大区", "time_cost": 3474408.2, "piece_cost": 156534.4, "total_cost": 3630942.6, "total_hours": 186866.67, "daily_people": 672.0}, {"region": "Ground项目部", "time_cost": 450091.05, "piece_cost": 14220.0, "total_cost": 464311.05, "total_hours": 21049.06, "daily_people": 65.524}, {"region": "MS 中南大区", "time_cost": 2294553.65, "piece_cost": 0.0, "total_cost": 2294553.65, "total_hours": 114042.33, "daily_people": 418.977}, {"region": "NE 东北大区", "time_cost": 5928787.89, "piece_cost": 0.0, "total_cost": 5928787.89, "total_hours": 311391.06, "daily_people": 945.997}, {"region": "TX 德州大区", "time_cost": 902007.25, "piece_cost": 1314615.17, "total_cost": 2216622.42, "total_hours": 53723.11, "daily_people": 179.16700000000003}, {"region": "WE 美西大区", "time_cost": 3839238.75, "piece_cost": 853477.81, "total_cost": 4692716.5600000005, "total_hours": 181739.92, "daily_people": 573.8438000000001}], "people_supplier_chart": [{"region": "FL 佛州大区", "daily_people": 414.0, "total_hours": 114096.11, "total_suppliers": 8, "compliant": 8, "noncompliant": 0, "a_count": 1, "b_count": 3, "c_count": 0, "d_count": 4, "cost_pct": 9.6, "total_cost": 2045625.86}, {"region": "GL 大湖大区", "daily_people": 672.0, "total_hours": 186866.67, "total_suppliers": 6, "compliant": 5, "noncompliant": 1, "a_count": 0, "b_count": 2, "c_count": 2, "d_count": 2, "cost_pct": 17.1, "total_cost": 3630942.6}, {"region": "Ground项目部", "daily_people": 65.524, "total_hours": 21049.06, "total_suppliers": 8, "compliant": 8, "noncompliant": 2, "a_count": 3, "b_count": 0, "c_count": 6, "d_count": 1, "cost_pct": 2.2, "total_cost": 464311.05}, {"region": "MS 中南大区", "daily_people": 418.977, "total_hours": 114042.33, "total_suppliers": 9, "compliant": 13, "noncompliant": 0, "a_count": 0, "b_count": 4, "c_count": 5, "d_count": 4, "cost_pct": 10.8, "total_cost": 2294553.65}, {"region": "NE 东北大区", "daily_people": 945.997, "total_hours": 311391.06, "total_suppliers": 8, "compliant": 7, "noncompliant": 1, "a_count": 1, "b_count": 4, "c_count": 3, "d_count": 0, "cost_pct": 27.9, "total_cost": 5928787.89}, {"region": "TX 德州大区", "daily_people": 179.16700000000003, "total_hours": 53723.11, "total_suppliers": 6, "compliant": 4, "noncompliant": 2, "a_count": 0, "b_count": 4, "c_count": 1, "d_count": 1, "cost_pct": 10.4, "total_cost": 2216622.42}, {"region": "WE 美西大区", "daily_people": 573.8438000000001, "total_hours": 181739.92, "total_suppliers": 11, "compliant": 15, "noncompliant": 1, "a_count": 6, "b_count": 4, "c_count": 5, "d_count": 1, "cost_pct": 22.1, "total_cost": 4692716.5600000005}], "supplier_table": [{"大区": "Ground项目部", "等级": "A", "合规": "合规", "不合规原因": "", "供应商": "AAS", "仓库": "CNO.G", "日均使用人数": 1, "人数占比": 1.5, "时薪": 18.0, "markup": 19, "结算价": 21.4, "总分": 94, "分析": "整体均衡", "报价竞争力得分": 68, "派遣满足率得分": 100, "考勤准确率得分": 100, "人员稳定率得分": 100, "定量考核总分": 94, "扣分明细": {}}, {"大区": "WE 美西大区", "等级": "A", "合规": "合规", "不合规原因": "", "供应商": "A-Share", "仓库": "CNO.H", "日均使用人数": 21, "人数占比": 3.7, "时薪": 17.9, "markup": 6, "结算价": 19.0, "总分": 91, "分析": "整体均衡", "报价竞争力得分": 78, "派遣满足率得分": 100, "考勤准确率得分": 78, "人员稳定率得分": 100, "定量考核总分": 91, "扣分明细": {}}, {"大区": "NE 东北大区", "等级": "A", "合规": "合规", "不合规原因": "", "供应商": "Qianyi", "仓库": "EWR.H", "日均使用人数": 307, "人数占比": 32.4, "时薪": 15.9, "markup": 16, "结算价": 18.5, "总分": 89, "分析": "扣分：Onsite Mgr(-5分)", "报价竞争力得分": 90, "派遣满足率得分": 100, "考勤准确率得分": 81, "人员稳定率得分": 100, "定量考核总分": 94, "扣分明细": {"Onsite Mgr": -5}}, {"大区": "WE 美西大区", "等级": "A", "合规": "合规", "不合规原因": "", "供应商": "Select Hire", "仓库": "CNO.H, LAV.H, SEA.H", "日均使用人数": 35, "人数占比": 6.2, "时薪": 17.2, "markup": 11, "结算价": 20.0, "总分": 87, "分析": "考勤准确率偏低(43分)；扣分：结账配合(-1分)", "报价竞争力得分": 69, "派遣满足率得分": 67, "考勤准确率得分": 43, "人员稳定率得分": 100, "定量考核总分": 69, "扣分明细": {"结账配合": -1}}, {"大区": "WE 美西大区", "等级": "A", "合规": "合规", "不合规原因": "", "供应商": "April Flower", "仓库": "DEN.H", "日均使用人数": 92, "人数占比": 16.0, "时薪": 16.0, "markup": 20, "结算价": 19.2, "总分": 86, "分析": "考勤准确率偏低(58分)", "报价竞争力得分": 74, "派遣满足率得分": 100, "考勤准确率得分": 58, "人员稳定率得分": 100, "定量考核总分": 86, "扣分明细": {}}, {"大区": "WE 美西大区", "等级": "A", "合规": "合规", "不合规原因": "", "供应商": "Imperial", "仓库": "SEA.H", "日均使用人数": 26, "人数占比": 4.5, "时薪": 17.5, "markup": 16, "结算价": 20.3, "总分": 86, "分析": "报价竞争力偏低(58分)", "报价竞争力得分": 58, "派遣满足率得分": 100, "考勤准确率得分": 72, "人员稳定率得分": 100, "定量考核总分": 86, "扣分明细": {}}, {"大区": "FL 佛州大区", "等级": "A", "合规": "合规", "不合规原因": "", "供应商": "SELECT HR", "仓库": "MCO.H", "日均使用人数": 40, "人数占比": 9.7, "时薪": 14.0, "markup": 18, "结算价": 16.5, "总分": 85, "分析": "考勤准确率偏低(44分)", "报价竞争力得分": 92, "派遣满足率得分": 94, "考勤准确率得分": 44, "人员稳定率得分": 100, "定量考核总分": 85, "扣分明细": {}}, {"大区": "Ground项目部", "等级": "A", "合规": "合规", "不合规原因": "", "供应商": "Z&Z", "仓库": "EWR.G", "日均使用人数": 22, "人数占比": 33.6, "时薪": 16.0, "markup": 25, "结算价": 20.0, "总分": 84, "分析": "整体均衡", "报价竞争力得分": 88, "派遣满足率得分": 85, "考勤准确率得分": 64, "人员稳定率得分": 100, "定量考核总分": 84, "扣分明细": {}}, {"大区": "Ground项目部", "等级": "A", "合规": "合规", "不合规原因": "", "供应商": "J&S Out Front", "仓库": "CNO.G", "日均使用人数": 6, "人数占比": 8.4, "时薪": 0.0, "markup": 0, "结算价": 0.0, "总分": 82, "分析": "考勤准确率偏低(41分)", "报价竞争力得分": 70, "派遣满足率得分": 100, "考勤准确率得分": 41, "人员稳定率得分": 100, "定量考核总分": 82, "扣分明细": {}}, {"大区": "WE 美西大区", "等级": "C", "合规": "合规", "不合规原因": "", "供应商": "Reliant", "仓库": "CNO.H, LAV.H", "日均使用人数": 43, "人数占比": 7.5, "时薪": 17.0, "markup": 8, "结算价": 19.9, "总分": 80, "分析": "考勤准确率偏低(42分)；扣分：Onsite Mgr(-10分)", "报价竞争力得分": 67, "派遣满足率得分": 79, "考勤准确率得分": 42, "人员稳定率得分": 100, "定量考核总分": 73, "扣分明细": {"Onsite Mgr": -10}}, {"大区": "NE 东北大区", "等级": "B", "合规": "合规", "不合规原因": "", "供应商": "CRD", "仓库": "EWR.H", "日均使用人数": 57, "人数占比": 6.0, "时薪": 16.0, "markup": 16, "结算价": 18.5, "总分": 78, "分析": "考勤准确率偏低(0分)", "报价竞争力得分": 90, "派遣满足率得分": 100, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 78, "扣分明细": {}}, {"大区": "MS 中南大区", "等级": "B", "合规": "合规", "不合规原因": "", "供应商": "SELECT HR", "仓库": "CLT.H", "日均使用人数": 14, "人数占比": 3.2, "时薪": 15.0, "markup": 20, "结算价": 18.0, "总分": 78, "分析": "考勤准确率偏低(59分)", "报价竞争力得分": 81, "派遣满足率得分": 85, "考勤准确率得分": 59, "人员稳定率得分": 79, "定量考核总分": 78, "扣分明细": {}}, {"大区": "GL 大湖大区", "等级": "B", "合规": "合规", "不合规原因": "", "供应商": "Grace hymn", "仓库": "CVG.H", "日均使用人数": 2, "人数占比": 0.3, "时薪": 14.0, "markup": 14, "结算价": 16.0, "总分": 76, "分析": "考勤准确率偏低(0分)", "报价竞争力得分": 100, "派遣满足率得分": 91, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 76, "扣分明细": {}}, {"大区": "TX 德州大区", "等级": "B", "合规": "合规", "不合规原因": "", "供应商": "Loyalty", "仓库": "DFW.H", "日均使用人数": 20, "人数占比": 11.1, "时薪": 14.0, "markup": 14, "结算价": 16.0, "总分": 74, "分析": "考勤准确率偏低(0分)", "报价竞争力得分": 70, "派遣满足率得分": 100, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 74, "扣分明细": {}}, {"大区": "WE 美西大区", "等级": "B", "合规": "合规", "不合规原因": "", "供应商": "Flash Way", "仓库": "CNO.H", "日均使用人数": 2, "人数占比": 0.3, "时薪": 17.8, "markup": 10, "结算价": 19.6, "总分": 74, "分析": "考勤准确率偏低(0分)", "报价竞争力得分": 69, "派遣满足率得分": 100, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 74, "扣分明细": {}}, {"大区": "NE 东北大区", "等级": "B", "合规": "合规", "不合规原因": "", "供应商": "Z&Z", "仓库": "EWR.H", "日均使用人数": 247, "人数占比": 26.1, "时薪": 15.9, "markup": 16, "结算价": 18.5, "总分": 73, "分析": "考勤准确率偏低(0分)；扣分：Onsite Mgr(-5分)", "报价竞争力得分": 90, "派遣满足率得分": 100, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 78, "扣分明细": {"Onsite Mgr": -5}}, {"大区": "NE 东北大区", "等级": "B", "合规": "合规", "不合规原因": "", "供应商": "LONG RIVER", "仓库": "EWR.H", "日均使用人数": 206, "人数占比": 21.8, "时薪": 16.0, "markup": 19, "结算价": 19.0, "总分": 72, "分析": "考勤准确率偏低(0分)；扣分：Onsite Mgr(-5分)", "报价竞争力得分": 83, "派遣满足率得分": 100, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 77, "扣分明细": {"Onsite Mgr": -5}}, {"大区": "FL 佛州大区", "等级": "B", "合规": "合规", "不合规原因": "", "供应商": "RAPID", "仓库": "MIA.H", "日均使用人数": 92, "人数占比": 22.2, "时薪": 15.0, "markup": 17, "结算价": 17.5, "总分": 71, "分析": "考勤准确率偏低(0分)；扣分：结账配合(-1分)", "报价竞争力得分": 75, "派遣满足率得分": 93, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 72, "扣分明细": {"结账配合": -1}}, {"大区": "FL 佛州大区", "等级": "B", "合规": "合规", "不合规原因": "", "供应商": "MYNN", "仓库": "MIA.H", "日均使用人数": 20, "人数占比": 4.8, "时薪": 14.0, "markup": 25, "结算价": 17.5, "总分": 71, "分析": "考勤准确率偏低(0分)", "报价竞争力得分": 75, "派遣满足率得分": 100, "考勤准确率得分": 0, "人员稳定率得分": 80, "定量考核总分": 71, "扣分明细": {}}, {"大区": "WE 美西大区", "等级": "B", "合规": "合规", "不合规原因": "", "供应商": "AAS", "仓库": "CNO.H", "日均使用人数": 11, "人数占比": 1.9, "时薪": 17.0, "markup": 12, "结算价": 19.0, "总分": 70, "分析": "派遣满足率偏低(57分)", "报价竞争力得分": 78, "派遣满足率得分": 57, "考勤准确率得分": 61, "人员稳定率得分": 100, "定量考核总分": 70, "扣分明细": {}}, {"大区": "MS 中南大区", "等级": "C", "合规": "合规", "不合规原因": "", "供应商": "Luxor", "仓库": "ATL.H, CLT.H", "日均使用人数": 54, "人数占比": 12.9, "时薪": 15.5, "markup": 22, "结算价": 18.9, "总分": 69, "分析": "派遣满足率偏低(38分)；扣分：Onsite Mgr(-10分)", "报价竞争力得分": 66, "派遣满足率得分": 38, "考勤准确率得分": 66, "人员稳定率得分": 100, "定量考核总分": 62, "扣分明细": {"Onsite Mgr": -10}}, {"大区": "MS 中南大区", "等级": "B", "合规": "合规", "不合规原因": "", "供应商": "Imperial", "仓库": "ATL.H, CLT.H", "日均使用人数": 165, "人数占比": 39.3, "时薪": 15.5, "markup": 22, "结算价": 18.9, "总分": 68, "分析": "扣分：Onsite Mgr(-20分)", "报价竞争力得分": 66, "派遣满足率得分": 77, "考勤准确率得分": 62, "人员稳定率得分": 100, "定量考核总分": 77, "扣分明细": {"Onsite Mgr": -20}}, {"大区": "TX 德州大区", "等级": "B", "合规": "不合规", "不合规原因": "this insurance company does not offer workers comp", "供应商": "B&A", "仓库": "DFW.H", "日均使用人数": 56, "人数占比": 31.1, "时薪": 14.0, "markup": 14, "结算价": 16.0, "总分": 66, "分析": "考勤准确率偏低(0分)", "报价竞争力得分": 70, "派遣满足率得分": 80, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 66, "扣分明细": {}}, {"大区": "NE 东北大区", "等级": "B", "合规": "合规", "不合规原因": "", "供应商": "APEX", "仓库": "JFK.H", "日均使用人数": 15, "人数占比": 1.6, "时薪": 17.0, "markup": 35, "结算价": 23.0, "总分": 65, "分析": "报价竞争力偏低(0分)、考勤准确率偏低(52分)；扣分：响应配合(-5分)", "报价竞争力得分": 0, "派遣满足率得分": 100, "考勤准确率得分": 52, "人员稳定率得分": 100, "定量考核总分": 70, "扣分明细": {"响应配合": -5}}, {"大区": "FL 佛州大区", "等级": "B", "合规": "合规", "不合规原因": "", "供应商": "MB Delivery", "仓库": "MCO.H", "日均使用人数": 46, "人数占比": 11.1, "时薪": 15.0, "markup": 23, "结算价": 18.5, "总分": 64, "分析": "报价竞争力偏低(59分)；扣分：不按时发薪(-20分)", "报价竞争力得分": 59, "派遣满足率得分": 98, "考勤准确率得分": 63, "人员稳定率得分": 100, "定量考核总分": 84, "扣分明细": {"不按时发薪": -20}}, {"大区": "TX 德州大区", "等级": "B", "合规": "不合规", "不合规原因": "insurance not showing up on the coverage checker", "供应商": "Makers", "仓库": "DFW.H", "日均使用人数": 3, "人数占比": 1.7, "时薪": 14.0, "markup": 14, "结算价": 16.0, "总分": 63, "分析": "考勤准确率偏低(0分)；扣分：响应配合(-5分)、结账配合(-1分)", "报价竞争力得分": 70, "派遣满足率得分": 84, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 68, "扣分明细": {"响应配合": -5, "结账配合": -1}}, {"大区": "GL 大湖大区", "等级": "B", "合规": "合规", "不合规原因": "", "供应商": "MI2016", "仓库": "ORD.H", "日均使用人数": 321, "人数占比": 47.8, "时薪": 16.0, "markup": 12, "结算价": 18.0, "总分": 61, "分析": "考勤准确率偏低(0分)；扣分：Onsite Mgr(-5分)", "报价竞争力得分": 72, "派遣满足率得分": 79, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 66, "扣分明细": {"Onsite Mgr": -5}}, {"大区": "WE 美西大区", "等级": "B", "合规": "合规", "不合规原因": "", "供应商": "J&S Out Front", "仓库": "CNO.H", "日均使用人数": 45, "人数占比": 7.8, "时薪": 16.5, "markup": 15, "结算价": 19.0, "总分": 61, "分析": "扣分：Onsite Mgr(-5分)、响应配合(-15分)、擅自离岗(-10分)", "报价竞争力得分": 78, "派遣满足率得分": 100, "考勤准确率得分": 76, "人员稳定率得分": 100, "定量考核总分": 91, "扣分明细": {"Onsite Mgr": -5, "响应配合": -15, "擅自离岗": -10}}, {"大区": "TX 德州大区", "等级": "B", "合规": "合规", "不合规原因": "", "供应商": "Grace hymn", "仓库": "IAH.H", "日均使用人数": 32, "人数占比": 18.1, "时薪": 15.0, "markup": 13, "结算价": 17.0, "总分": 61, "分析": "报价竞争力偏低(51分)、考勤准确率偏低(0分)", "报价竞争力得分": 51, "派遣满足率得分": 76, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 61, "扣分明细": {}}, {"大区": "NE 东北大区", "等级": "C", "合规": "不合规", "不合规原因": "No Workers' Compensation Coverage Exists for this Employer on the checker", "供应商": "PRIMAL", "仓库": "JFK.H", "日均使用人数": 54, "人数占比": 5.8, "时薪": 17.0, "markup": 35, "结算价": 23.0, "总分": 59, "分析": "报价竞争力偏低(0分)、考勤准确率偏低(0分)；扣分：结账配合(-1分)", "报价竞争力得分": 0, "派遣满足率得分": 100, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 60, "扣分明细": {"结账配合": -1}}, {"大区": "GL 大湖大区", "等级": "C", "合规": "合规", "不合规原因": "", "供应商": "Imperial", "仓库": "ORD.H", "日均使用人数": 24, "人数占比": 3.6, "时薪": 16.0, "markup": 17, "结算价": 18.4, "总分": 59, "分析": "考勤准确率偏低(0分)；扣分：响应配合(-5分)", "报价竞争力得分": 66, "派遣满足率得分": 76, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 64, "扣分明细": {"响应配合": -5}}, {"大区": "MS 中南大区", "等级": "C", "合规": "合规", "不合规原因": "", "供应商": "RAPID", "仓库": "ATL.H", "日均使用人数": 17, "人数占比": 4.1, "时薪": 15.0, "markup": 20, "结算价": 18.0, "总分": 58, "分析": "派遣满足率偏低(55分)、考勤准确率偏低(0分)", "报价竞争力得分": 81, "派遣满足率得分": 55, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 58, "扣分明细": {}}, {"大区": "Ground项目部", "等级": "C", "合规": "不合规", "不合规原因": "the insurance company website explicitly states PEOs are not eligible", "供应商": "Storx", "仓库": "SFO.G", "日均使用人数": 3, "人数占比": 4.6, "时薪": 19.0, "markup": 20, "结算价": 22.8, "总分": 58, "分析": "报价竞争力偏低(49分)、考勤准确率偏低(0分)", "报价竞争力得分": 49, "派遣满足率得分": 70, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 58, "扣分明细": {}}, {"大区": "TX 德州大区", "等级": "C", "合规": "合规", "不合规原因": "", "供应商": "Fasthorse", "仓库": "DFW.H", "日均使用人数": 44, "人数占比": 24.5, "时薪": 13.0, "markup": 15, "结算价": 15.0, "总分": 58, "分析": "考勤准确率偏低(0分)；扣分：Onsite Mgr(-5分)、响应配合(-5分)、库内管理(-10分)", "报价竞争力得分": 89, "派遣满足率得分": 100, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 78, "扣分明细": {"Onsite Mgr": -5, "响应配合": -5, "库内管理": -10}}, {"大区": "NE 东北大区", "等级": "C", "合规": "合规", "不合规原因": "", "供应商": "Direct Jobs", "仓库": "EWR.H", "日均使用人数": 26, "人数占比": 2.7, "时薪": 15.9, "markup": 20, "结算价": 19.1, "总分": 57, "分析": "派遣满足率偏低(53分)、考勤准确率偏低(0分)", "报价竞争力得分": 81, "派遣满足率得分": 53, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 57, "扣分明细": {}}, {"大区": "GL 大湖大区", "等级": "C", "合规": "合规", "不合规原因": "", "供应商": "Lucky WJ", "仓库": "ORD.H", "日均使用人数": 52, "人数占比": 7.7, "时薪": 17.0, "markup": 15, "结算价": 19.5, "总分": 54, "分析": "报价竞争力偏低(48分)、考勤准确率偏低(0分)；扣分：Onsite Mgr(-5分)、库内管理(-10分)", "报价竞争力得分": 48, "派遣满足率得分": 100, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 70, "扣分明细": {"Onsite Mgr": -5, "库内管理": -10}}, {"大区": "WE 美西大区", "等级": "C", "合规": "合规", "不合规原因": "", "供应商": "Direct Jobs", "仓库": "CNO.H", "日均使用人数": 41, "人数占比": 7.1, "时薪": 17.0, "markup": 17, "结算价": 19.9, "总分": 54, "分析": "扣分：响应配合(-15分)", "报价竞争力得分": 64, "派遣满足率得分": 61, "考勤准确率得分": 60, "人员稳定率得分": 100, "定量考核总分": 69, "扣分明细": {"响应配合": -15}}, {"大区": "NE 东北大区", "等级": "C", "合规": "合规", "不合规原因": "", "供应商": "Imperial", "仓库": "EWR.H", "日均使用人数": 35, "人数占比": 3.7, "时薪": 16.0, "markup": 20, "结算价": 19.2, "总分": 54, "分析": "派遣满足率偏低(57分)、考勤准确率偏低(0分)；扣分：响应配合(-5分)", "报价竞争力得分": 80, "派遣满足率得分": 57, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 59, "扣分明细": {"响应配合": -5}}, {"大区": "WE 美西大区", "等级": "C", "合规": "不合规", "不合规原因": "No Workers' Compensation Coverage Exists for this Employer on the checker", "供应商": "TG", "仓库": "LAV.H", "日均使用人数": 90, "人数占比": 15.7, "时薪": 18.1, "markup": 5, "结算价": 19.0, "总分": 52, "分析": "派遣满足率偏低(0分)", "报价竞争力得分": 78, "派遣满足率得分": 0, "考勤准确率得分": 82, "人员稳定率得分": 100, "定量考核总分": 52, "扣分明细": {}}, {"大区": "WE 美西大区", "等级": "C", "合规": "合规", "不合规原因": "", "供应商": "JC-SL(Greatfast)", "仓库": "CNO.H, LAV.H", "日均使用人数": 168, "人数占比": 29.3, "时薪": 17.9, "markup": 6, "结算价": 19.0, "总分": 51, "分析": "派遣满足率偏低(31分)；扣分：Onsite Mgr(-5分)、响应配合(-15分)、结账配合(-1分)、库内管理(-10分)", "报价竞争力得分": 78, "派遣满足率得分": 31, "考勤准确率得分": 77, "人员稳定率得分": 100, "定量考核总分": 63, "扣分明细": {"Onsite Mgr": -5, "响应配合": -15, "结账配合": -1, "库内管理": -10}}, {"大区": "MS 中南大区", "等级": "D", "合规": "合规", "不合规原因": "", "供应商": "JC-SL(Greatfast)", "仓库": "ATL.H, CLT.H", "日均使用人数": 54, "人数占比": 12.9, "时薪": 15.0, "markup": 20, "结算价": 18.0, "总分": 51, "分析": "派遣满足率偏低(55分)、考勤准确率偏低(32分)；扣分：Onsite Mgr(-10分)、响应配合(-10分)、不按时发薪(-40分)", "报价竞争力得分": 81, "派遣满足率得分": 55, "考勤准确率得分": 32, "人员稳定率得分": 100, "定量考核总分": 65, "扣分明细": {"Onsite Mgr": -10, "响应配合": -10, "不按时发薪": -40}}, {"大区": "MS 中南大区", "等级": "C", "合规": "合规", "不合规原因": "", "供应商": "Direct Jobs", "仓库": "ATL.H", "日均使用人数": 35, "人数占比": 8.4, "时薪": 16.0, "markup": 20, "结算价": 19.2, "总分": 51, "分析": "派遣满足率偏低(40分)；扣分：Onsite Mgr(-10分)", "报价竞争力得分": 63, "派遣满足率得分": 40, "考勤准确率得分": 60, "人员稳定率得分": 100, "定量考核总分": 61, "扣分明细": {"Onsite Mgr": -10}}, {"大区": "Ground项目部", "等级": "C", "合规": "合规", "不合规原因": "", "供应商": "Direct Jobs", "仓库": "CNO.G", "日均使用人数": 3, "人数占比": 4.4, "时薪": 17.0, "markup": 17, "结算价": 19.9, "总分": 50, "分析": "派遣满足率偏低(0分)、考勤准确率偏低(59分)", "报价竞争力得分": 90, "派遣满足率得分": 0, "考勤准确率得分": 59, "人员稳定率得分": 100, "定量考核总分": 50, "扣分明细": {}}, {"大区": "Ground项目部", "等级": "C", "合规": "合规", "不合规原因": "", "供应商": "ERC", "仓库": "CNO.G", "日均使用人数": 1, "人数占比": 1.5, "时薪": 18.0, "markup": 20, "结算价": 21.6, "总分": 49, "分析": "派遣满足率偏低(0分)", "报价竞争力得分": 66, "派遣满足率得分": 0, "考勤准确率得分": 79, "人员稳定率得分": 100, "定量考核总分": 49, "扣分明细": {}}, {"大区": "Ground项目部", "等级": "C", "合规": "不合规", "不合规原因": "No Workers' Compensation Coverage Exists for this Employer on the checker", "供应商": "XPS", "仓库": "CNO.G, ORD.G, SFO.G", "日均使用人数": 28, "人数占比": 42.9, "时薪": 17.5, "markup": 28, "结算价": 22.4, "总分": 48, "分析": "报价竞争力偏低(43分)、派遣满足率偏低(23分)、考勤准确率偏低(14分)；扣分：响应配合(-5分)", "报价竞争力得分": 43, "派遣满足率得分": 23, "考勤准确率得分": 14, "人员稳定率得分": 92, "定量考核总分": 39, "扣分明细": {"响应配合": -5}}, {"大区": "Ground项目部", "等级": "C", "合规": "合规", "不合规原因": "", "供应商": "Imperial", "仓库": "ATL.G", "日均使用人数": 2, "人数占比": 3.1, "时薪": 16.0, "markup": 22, "结算价": 19.5, "总分": 47, "分析": "派遣满足率偏低(40分)、考勤准确率偏低(0分)；扣分：响应配合(-5分)", "报价竞争力得分": 95, "派遣满足率得分": 40, "考勤准确率得分": 0, "人员稳定率得分": 85, "定量考核总分": 52, "扣分明细": {"响应配合": -5}}, {"大区": "MS 中南大区", "等级": "C", "合规": "合规", "不合规原因": "", "供应商": "Employer Solutions Services", "仓库": "ATL.H, CLT.H", "日均使用人数": 61, "人数占比": 14.6, "时薪": 15.5, "markup": 23, "结算价": 19.1, "总分": 45, "分析": "派遣满足率偏低(20分)、考勤准确率偏低(22分)；扣分：Onsite Mgr(-10分)", "报价竞争力得分": 63, "派遣满足率得分": 20, "考勤准确率得分": 22, "人员稳定率得分": 80, "定量考核总分": 41, "扣分明细": {"Onsite Mgr": -10}}, {"大区": "TX 德州大区", "等级": "D", "合规": "合规", "不合规原因": "", "供应商": "Fast Staff", "仓库": "IAH.H", "日均使用人数": 24, "人数占比": 13.5, "时薪": 13.0, "markup": 23, "结算价": 16.0, "总分": 38, "分析": "考勤准确率偏低(0分)、人员稳定率偏低(0分)", "报价竞争力得分": 70, "派遣满足率得分": 61, "考勤准确率得分": 0, "人员稳定率得分": 0, "定量考核总分": 38, "扣分明细": {}}, {"大区": "GL 大湖大区", "等级": "D", "合规": "合规", "不合规原因": "", "供应商": "Ultimile", "仓库": "ORD.H", "日均使用人数": 164, "人数占比": 24.4, "时薪": 17.0, "markup": 12, "结算价": 19.0, "总分": 38, "分析": "报价竞争力偏低(56分)、派遣满足率偏低(55分)、考勤准确率偏低(0分)；扣分：Onsite Mgr(-5分)、响应配合(-5分)、擅自离岗(-5分)", "报价竞争力得分": 56, "派遣满足率得分": 55, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 53, "扣分明细": {"Onsite Mgr": -5, "响应配合": -5, "擅自离岗": -5}}, {"大区": "MS 中南大区", "等级": "D", "合规": "合规", "不合规原因": "", "供应商": "EMEC", "仓库": "ATL.H", "日均使用人数": 13, "人数占比": 3.1, "时薪": 16.0, "markup": 23, "结算价": 19.7, "总分": 34, "分析": "报价竞争力偏低(54分)、派遣满足率偏低(0分)；扣分：响应配合(-10分)", "报价竞争力得分": 54, "派遣满足率得分": 0, "考勤准确率得分": 65, "人员稳定率得分": 100, "定量考核总分": 44, "扣分明细": {"响应配合": -10}}, {"大区": "GL 大湖大区", "等级": "D", "合规": "不合规", "不合规原因": "No Workers' Compensation Coverage Exists for this Employer on the checker", "供应商": "SDP", "仓库": "ORD.H", "日均使用人数": 109, "人数占比": 16.2, "时薪": 16.0, "markup": 12, "结算价": 18.0, "总分": 30, "分析": "派遣满足率偏低(0分)、考勤准确率偏低(0分)；扣分：Onsite Mgr(-5分)", "报价竞争力得分": 72, "派遣满足率得分": 0, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 34, "扣分明细": {"Onsite Mgr": -5}}, {"大区": "FL 佛州大区", "等级": "D", "合规": "合规", "不合规原因": "", "供应商": "Spartan", "仓库": "SJU", "日均使用人数": 3, "人数占比": 0.7, "时薪": 11.0, "markup": 46, "结算价": 16.1, "总分": 29, "分析": "派遣满足率偏低(0分)、考勤准确率偏低(0分)；扣分：擅自离岗(-5分)", "报价竞争力得分": 70, "派遣满足率得分": 0, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 34, "扣分明细": {"擅自离岗": -5}}, {"大区": "FL 佛州大区", "等级": "D", "合规": "合规", "不合规原因": "", "供应商": "Dagmaries", "仓库": "SJU", "日均使用人数": 6, "人数占比": 1.4, "时薪": 12.0, "markup": 25, "结算价": 15.0, "总分": 23, "分析": "派遣满足率偏低(0分)、考勤准确率偏低(44分)；扣分：响应配合(-15分)、擅自离岗(-5分)", "报价竞争力得分": 70, "派遣满足率得分": 0, "考勤准确率得分": 44, "人员稳定率得分": 100, "定量考核总分": 49, "扣分明细": {"响应配合": -15, "擅自离岗": -5}}, {"大区": "MS 中南大区", "等级": "D", "合规": "合规", "不合规原因": "", "供应商": "XPS", "仓库": "ATL.H", "日均使用人数": 6, "人数占比": 1.5, "时薪": 15.0, "markup": 20, "结算价": 18.0, "总分": 16, "分析": "派遣满足率偏低(0分)、考勤准确率偏低(0分)、人员稳定率偏低(0分)", "报价竞争力得分": 81, "派遣满足率得分": 0, "考勤准确率得分": 0, "人员稳定率得分": 0, "定量考核总分": 16, "扣分明细": {}}, {"大区": "FL 佛州大区", "等级": "D", "合规": "合规", "不合规原因": "", "供应商": "POPULARILY", "仓库": "MIA.H", "日均使用人数": 160, "人数占比": 38.6, "时薪": 14.0, "markup": 25, "结算价": 17.5, "总分": 11, "分析": "报价竞争力偏低(59分)、考勤准确率偏低(0分)；扣分：不按时发薪(-60分)", "报价竞争力得分": 59, "派遣满足率得分": 99, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 71, "扣分明细": {"不按时发薪": -60}}, {"大区": "FL 佛州大区", "等级": "D", "合规": "合规", "不合规原因": "", "供应商": "Joy On Us", "仓库": "MCO.H", "日均使用人数": 47, "人数占比": 11.4, "时薪": 14.0, "markup": 31, "结算价": 18.4, "总分": 3, "分析": "扣分：商业道德(-20分)、不按时发薪(-60分)", "报价竞争力得分": 60, "派遣满足率得分": 88, "考勤准确率得分": 80, "人员稳定率得分": 100, "定量考核总分": 83, "扣分明细": {"商业道德": -20, "不按时发薪": -60}}], "cross_region": [{"供应商": "AAS", "大区": "Ground项目部", "日均使用人数": 1, "总分": 94, "等级": "A", "时薪": 18.0, "markup": 19, "结算价": 21.4}, {"供应商": "AAS", "大区": "WE 美西大区", "日均使用人数": 11, "总分": 70, "等级": "B", "时薪": 17.0, "markup": 12, "结算价": 19.0}, {"供应商": "Direct Jobs", "大区": "Ground项目部", "日均使用人数": 3, "总分": 50, "等级": "C", "时薪": 17.0, "markup": 17, "结算价": 19.9}, {"供应商": "Direct Jobs", "大区": "MS 中南大区", "日均使用人数": 35, "总分": 51, "等级": "C", "时薪": 16.0, "markup": 20, "结算价": 19.2}, {"供应商": "Direct Jobs", "大区": "NE 东北大区", "日均使用人数": 26, "总分": 57, "等级": "C", "时薪": 15.9, "markup": 20, "结算价": 19.1}, {"供应商": "Direct Jobs", "大区": "WE 美西大区", "日均使用人数": 41, "总分": 54, "等级": "C", "时薪": 17.0, "markup": 17, "结算价": 19.9}, {"供应商": "Grace hymn", "大区": "GL 大湖大区", "日均使用人数": 2, "总分": 76, "等级": "B", "时薪": 14.0, "markup": 14, "结算价": 16.0}, {"供应商": "Grace hymn", "大区": "TX 德州大区", "日均使用人数": 32, "总分": 61, "等级": "B", "时薪": 15.0, "markup": 13, "结算价": 17.0}, {"供应商": "Imperial", "大区": "GL 大湖大区", "日均使用人数": 24, "总分": 59, "等级": "C", "时薪": 16.0, "markup": 17, "结算价": 18.4}, {"供应商": "Imperial", "大区": "Ground项目部", "日均使用人数": 2, "总分": 47, "等级": "C", "时薪": 16.0, "markup": 22, "结算价": 19.5}, {"供应商": "Imperial", "大区": "MS 中南大区", "日均使用人数": 165, "总分": 68, "等级": "B", "时薪": 15.5, "markup": 22, "结算价": 18.9}, {"供应商": "Imperial", "大区": "NE 东北大区", "日均使用人数": 35, "总分": 54, "等级": "C", "时薪": 16.0, "markup": 20, "结算价": 19.2}, {"供应商": "Imperial", "大区": "WE 美西大区", "日均使用人数": 26, "总分": 86, "等级": "A", "时薪": 17.5, "markup": 16, "结算价": 20.3}, {"供应商": "J&S Out Front", "大区": "Ground项目部", "日均使用人数": 6, "总分": 82, "等级": "A", "时薪": 0.0, "markup": 0, "结算价": 0.0}, {"供应商": "J&S Out Front", "大区": "WE 美西大区", "日均使用人数": 45, "总分": 61, "等级": "B", "时薪": 16.5, "markup": 15, "结算价": 19.0}, {"供应商": "JC-SL(Greatfast)", "大区": "MS 中南大区", "日均使用人数": 54, "总分": 51, "等级": "D", "时薪": 15.0, "markup": 20, "结算价": 18.0}, {"供应商": "JC-SL(Greatfast)", "大区": "WE 美西大区", "日均使用人数": 168, "总分": 51, "等级": "C", "时薪": 17.9, "markup": 6, "结算价": 19.0}, {"供应商": "RAPID", "大区": "FL 佛州大区", "日均使用人数": 92, "总分": 71, "等级": "B", "时薪": 15.0, "markup": 17, "结算价": 17.5}, {"供应商": "RAPID", "大区": "MS 中南大区", "日均使用人数": 17, "总分": 58, "等级": "C", "时薪": 15.0, "markup": 20, "结算价": 18.0}, {"供应商": "SELECT HR", "大区": "FL 佛州大区", "日均使用人数": 40, "总分": 85, "等级": "A", "时薪": 14.0, "markup": 18, "结算价": 16.5}, {"供应商": "SELECT HR", "大区": "MS 中南大区", "日均使用人数": 14, "总分": 78, "等级": "B", "时薪": 15.0, "markup": 20, "结算价": 18.0}, {"供应商": "XPS", "大区": "Ground项目部", "日均使用人数": 28, "总分": 48, "等级": "C", "时薪": 17.5, "markup": 28, "结算价": 22.4}, {"供应商": "XPS", "大区": "MS 中南大区", "日均使用人数": 6, "总分": 16, "等级": "D", "时薪": 15.0, "markup": 20, "结算价": 18.0}, {"供应商": "Z&Z", "大区": "Ground项目部", "日均使用人数": 22, "总分": 84, "等级": "A", "时薪": 16.0, "markup": 25, "结算价": 20.0}, {"供应商": "Z&Z", "大区": "NE 东北大区", "日均使用人数": 247, "总分": 73, "等级": "B", "时薪": 15.9, "markup": 16, "结算价": 18.5}], "insurance": [{"区域": "GL 大湖大区", "供应商": "SDP", "存在问题": "No Workers' Compensation Coverage Exists for this Employer on the checker", "区域反馈进度": "已与劳务公司沟通，预计下周更新COI及Policy", "区长是否知悉": "", "责任人": "@Suki Shang", "DDL": "下周五（6/26）"}, {"区域": "NE 东北大区", "供应商": "Primal", "存在问题": "No Workers' Compensation Coverage Exists for this Employer on the checker", "区域反馈进度": "已更新COI，待邦宁核验", "区长是否知悉": "是", "责任人": "@Gloria Lin", "DDL": ""}, {"区域": "WE 美西大区", "供应商": "TG", "存在问题": "No Workers' Compensation Coverage Exists for this Employer on the checker", "区域反馈进度": "正在更换主体，已跟邦宁对接WC", "区长是否知悉": "是", "责任人": "@Max Lin", "DDL": "保险agency表示申请至少是需要3周的时间。预计7月中左右可以出保险"}, {"区域": "Ground项目部", "供应商": "StorX", "存在问题": "the insurance company website explicitly states PEOs are not eligible", "区域反馈进度": "供应商确认： 不属于PEO模式，员工为直接雇佣及管理。待提供Declaration Page", "区长是否知悉": "", "责任人": "@Thomson Zhang", "DDL": ""}, {"区域": "TX 德州大区", "供应商": "B&A", "存在问题": "this insurance company does not offer workers comp", "区域反馈进度": "已向供应商推荐邦宁", "区长是否知悉": "", "责任人": "@Stacy Cui", "DDL": ""}, {"区域": "TX 德州大区", "供应商": "Makers", "存在问题": "insurance not showing up on the coverage checker", "区域反馈进度": "已向供应商推荐邦宁", "区长是否知悉": "", "责任人": "", "DDL": ""}], "detail_by_region": {"FL 佛州大区": [{"大区": "FL 佛州大区", "仓库": "MCO.H", "供应商": "Joy On Us", "等级": "D", "合规标签": "合规", "不合规原因": "", "日均使用人数": 47, "分拣工时薪": 14.0, "markup": 31, "分拣工结算价": 18.4, "报价竞争力得分": 60, "派遣满足率得分": 88, "考勤准确率得分": 80, "人员稳定率得分": 100, "定量考核总分": 83, "总分": 3, "报价竞争力": 1.0325, "派遣满足率": 0.96, "考勤准确率": 0.932, "人员稳定率": 0.813, "onsite_manager_管理幅宽": 0.04, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 2, "不按时工作": 0, "不按时发薪": 3, "备注": "", "扣分汇总": "商业道德：-20分、不按时发薪：-60分", "扣分明细列表": [{"项目": "商业道德", "扣分": -20}, {"项目": "不按时发薪", "扣分": -60}], "扣分总计": -80, "报价竞争力_pct": 103.2, "派遣满足率_pct": 96.0, "考勤准确率_pct": 93.2, "人员稳定率_pct": 81.3}, {"大区": "FL 佛州大区", "仓库": "MCO.H", "供应商": "MB Delivery", "等级": "B", "合规标签": "合规", "不合规原因": "", "日均使用人数": 46, "分拣工时薪": 15.0, "markup": 23, "分拣工结算价": 18.5, "报价竞争力得分": 59, "派遣满足率得分": 98, "考勤准确率得分": 63, "人员稳定率得分": 100, "定量考核总分": 84, "总分": 64, "报价竞争力": 1.0382, "派遣满足率": 0.995, "考勤准确率": 0.877, "人员稳定率": 0.587, "onsite_manager_管理幅宽": 0.04, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 1, "备注": "", "扣分汇总": "不按时发薪：-20分", "扣分明细列表": [{"项目": "不按时发薪", "扣分": -20}], "扣分总计": -20, "报价竞争力_pct": 103.8, "派遣满足率_pct": 99.5, "考勤准确率_pct": 87.7, "人员稳定率_pct": 58.7}, {"大区": "FL 佛州大区", "仓库": "MCO.H", "供应商": "SELECT HR", "等级": "A", "合规标签": "合规", "不合规原因": "", "日均使用人数": 40, "分拣工时薪": 14.0, "markup": 18, "分拣工结算价": 16.5, "报价竞争力得分": 92, "派遣满足率得分": 94, "考勤准确率得分": 44, "人员稳定率得分": 100, "定量考核总分": 85, "总分": 85, "报价竞争力": 0.927, "派遣满足率": 0.98, "考勤准确率": 0.812, "人员稳定率": 0.413, "onsite_manager_管理幅宽": 0.04, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 92.7, "派遣满足率_pct": 98.0, "考勤准确率_pct": 81.2, "人员稳定率_pct": 41.3}, {"大区": "FL 佛州大区", "仓库": "MIA.H", "供应商": "POPULARILY", "等级": "D", "合规标签": "合规", "不合规原因": "", "日均使用人数": 160, "分拣工时薪": 14.0, "markup": 25, "分拣工结算价": 17.5, "报价竞争力得分": 59, "派遣满足率得分": 99, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 71, "总分": 11, "报价竞争力": 1.0382, "派遣满足率": 0.996, "考勤准确率": 0.446, "人员稳定率": 0.656, "onsite_manager_管理幅宽": 0.0667, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 3, "备注": "", "扣分汇总": "不按时发薪：-60分", "扣分明细列表": [{"项目": "不按时发薪", "扣分": -60}], "扣分总计": -60, "报价竞争力_pct": 103.8, "派遣满足率_pct": 99.6, "考勤准确率_pct": 44.6, "人员稳定率_pct": 65.6}, {"大区": "FL 佛州大区", "仓库": "MIA.H", "供应商": "RAPID", "等级": "B", "合规标签": "合规", "不合规原因": "", "日均使用人数": 92, "分拣工时薪": 15.0, "markup": 17, "分拣工结算价": 17.5, "报价竞争力得分": 75, "派遣满足率得分": 93, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 72, "总分": 71, "报价竞争力": 0.982, "派遣满足率": 0.9753, "考勤准确率": 0.584, "人员稳定率": 0.464, "onsite_manager_管理幅宽": 0.0667, "不积极响应配合": 0, "不配合结账": 1, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "结账配合：-1分", "扣分明细列表": [{"项目": "结账配合", "扣分": -1}], "扣分总计": -1, "报价竞争力_pct": 98.2, "派遣满足率_pct": 97.5, "考勤准确率_pct": 58.4, "人员稳定率_pct": 46.4}, {"大区": "FL 佛州大区", "仓库": "MIA.H", "供应商": "MYNN", "等级": "B", "合规标签": "合规", "不合规原因": "", "日均使用人数": 20, "分拣工时薪": 14.0, "markup": 25, "分拣工结算价": 17.5, "报价竞争力得分": 75, "派遣满足率得分": 100, "考勤准确率得分": 0, "人员稳定率得分": 80, "定量考核总分": 71, "总分": 71, "报价竞争力": 0.982, "派遣满足率": 1.0, "考勤准确率": 0.165, "人员稳定率": 0.234, "onsite_manager_管理幅宽": 0.0667, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 98.2, "派遣满足率_pct": 100.0, "考勤准确率_pct": 16.5, "人员稳定率_pct": 23.4}, {"大区": "FL 佛州大区", "仓库": "SJU", "供应商": "Dagmaries", "等级": "D", "合规标签": "合规", "不合规原因": "", "日均使用人数": 6, "分拣工时薪": 12.0, "markup": 25, "分拣工结算价": 15.0, "报价竞争力得分": 70, "派遣满足率得分": 0, "考勤准确率得分": 44, "人员稳定率得分": 100, "定量考核总分": 49, "总分": 23, "报价竞争力": 1.0, "派遣满足率": 0.7, "考勤准确率": 0.814, "人员稳定率": 1.0, "onsite_manager_管理幅宽": 0.1, "不积极响应配合": 3, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 1, "不按时发薪": 0, "备注": "报价平均值未计入SJU.H", "扣分汇总": "响应配合：-15分、擅自离岗：-5分", "扣分明细列表": [{"项目": "响应配合", "扣分": -15}, {"项目": "擅自离岗", "扣分": -5}], "扣分总计": -20, "报价竞争力_pct": 100.0, "派遣满足率_pct": 70.0, "考勤准确率_pct": 81.4, "人员稳定率_pct": 100.0}, {"大区": "FL 佛州大区", "仓库": "SJU", "供应商": "Spartan", "等级": "D", "合规标签": "合规", "不合规原因": "", "日均使用人数": 3, "分拣工时薪": 11.0, "markup": 46, "分拣工结算价": 16.1, "报价竞争力得分": 70, "派遣满足率得分": 0, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 34, "总分": 29, "报价竞争力": 1.0, "派遣满足率": 0.65, "考勤准确率": 0.539, "人员稳定率": 0.8, "onsite_manager_管理幅宽": 0.1, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 1, "不按时发薪": 0, "备注": "报价平均值未计入SJU.H", "扣分汇总": "擅自离岗：-5分", "扣分明细列表": [{"项目": "擅自离岗", "扣分": -5}], "扣分总计": -5, "报价竞争力_pct": 100.0, "派遣满足率_pct": 65.0, "考勤准确率_pct": 53.9, "人员稳定率_pct": 80.0}], "GL 大湖大区": [{"大区": "GL 大湖大区", "仓库": "CVG.H", "供应商": "Grace hymn", "等级": "B", "合规标签": "合规", "不合规原因": "", "日均使用人数": 2, "分拣工时薪": 14.0, "markup": 14, "分拣工结算价": 16.0, "报价竞争力得分": 100, "派遣满足率得分": 91, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 76, "总分": 76, "报价竞争力": 0.8815, "派遣满足率": 0.97, "考勤准确率": 0.097, "人员稳定率": 0.6, "onsite_manager_管理幅宽": 0.04, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 88.1, "派遣满足率_pct": 97.0, "考勤准确率_pct": 9.7, "人员稳定率_pct": 60.0}, {"大区": "GL 大湖大区", "仓库": "ORD.H", "供应商": "Imperial", "等级": "C", "合规标签": "合规", "不合规原因": "", "日均使用人数": 24, "分拣工时薪": 16.0, "markup": 17, "分拣工结算价": 18.4, "报价竞争力得分": 66, "派遣满足率得分": 76, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 64, "总分": 59, "报价竞争力": 1.0138, "派遣满足率": 0.92, "考勤准确率": 0.67, "人员稳定率": 0.458, "onsite_manager_管理幅宽": 0.09, "不积极响应配合": 1, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "响应配合：-5分", "扣分明细列表": [{"项目": "响应配合", "扣分": -5}], "扣分总计": -5, "报价竞争力_pct": 101.4, "派遣满足率_pct": 92.0, "考勤准确率_pct": 67.0, "人员稳定率_pct": 45.8}, {"大区": "GL 大湖大区", "仓库": "ORD.H", "供应商": "Lucky WJ", "等级": "C", "合规标签": "合规", "不合规原因": "", "日均使用人数": 52, "分拣工时薪": 17.0, "markup": 15, "分拣工结算价": 19.5, "报价竞争力得分": 48, "派遣满足率得分": 100, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 70, "总分": 54, "报价竞争力": 1.0744, "派遣满足率": 1.02, "考勤准确率": 0.72, "人员稳定率": 0.795, "onsite_manager_管理幅宽": 0.03, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "Onsite Mgr：-5分、库内管理：-10分", "扣分明细列表": [{"项目": "Onsite Mgr", "扣分": -5}, {"项目": "库内管理", "扣分": -10}], "扣分总计": -15, "报价竞争力_pct": 107.4, "派遣满足率_pct": 102.0, "考勤准确率_pct": 72.0, "人员稳定率_pct": 79.5}, {"大区": "GL 大湖大区", "仓库": "ORD.H", "供应商": "MI2016", "等级": "B", "合规标签": "合规", "不合规原因": "", "日均使用人数": 321, "分拣工时薪": 16.0, "markup": 12, "分拣工结算价": 18.0, "报价竞争力得分": 72, "派遣满足率得分": 79, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 66, "总分": 61, "报价竞争力": 0.9917, "派遣满足率": 0.93, "考勤准确率": 0.165, "人员稳定率": 0.668, "onsite_manager_管理幅宽": 0.01, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "Onsite Mgr：-5分", "扣分明细列表": [{"项目": "Onsite Mgr", "扣分": -5}], "扣分总计": -5, "报价竞争力_pct": 99.2, "派遣满足率_pct": 93.0, "考勤准确率_pct": 16.5, "人员稳定率_pct": 66.8}, {"大区": "GL 大湖大区", "仓库": "ORD.H", "供应商": "SDP", "等级": "D", "合规标签": "不合规", "不合规原因": "No Workers' Compensation Coverage Exists for this Employer on the checker", "日均使用人数": 109, "分拣工时薪": 16.0, "markup": 12, "分拣工结算价": 18.0, "报价竞争力得分": 72, "派遣满足率得分": 0, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 34, "总分": 30, "报价竞争力": 0.9917, "派遣满足率": 0.78, "考勤准确率": 0.693, "人员稳定率": 0.759, "onsite_manager_管理幅宽": 0.01, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "Onsite Mgr：-5分", "扣分明细列表": [{"项目": "Onsite Mgr", "扣分": -5}], "扣分总计": -5, "报价竞争力_pct": 99.2, "派遣满足率_pct": 78.0, "考勤准确率_pct": 69.3, "人员稳定率_pct": 75.9}, {"大区": "GL 大湖大区", "仓库": "ORD.H", "供应商": "Ultimile", "等级": "D", "合规标签": "合规", "不合规原因": "", "日均使用人数": 164, "分拣工时薪": 17.0, "markup": 12, "分拣工结算价": 19.0, "报价竞争力得分": 56, "派遣满足率得分": 55, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 53, "总分": 38, "报价竞争力": 1.0468, "派遣满足率": 0.85, "考勤准确率": 0.598, "人员稳定率": 0.787, "onsite_manager_管理幅宽": 0.01, "不积极响应配合": 1, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 1, "不按时发薪": 0, "备注": "", "扣分汇总": "Onsite Mgr：-5分、响应配合：-5分、擅自离岗：-5分", "扣分明细列表": [{"项目": "Onsite Mgr", "扣分": -5}, {"项目": "响应配合", "扣分": -5}, {"项目": "擅自离岗", "扣分": -5}], "扣分总计": -15, "报价竞争力_pct": 104.7, "派遣满足率_pct": 85.0, "考勤准确率_pct": 59.8, "人员稳定率_pct": 78.7}], "MS 中南大区": [{"大区": "MS 中南大区", "仓库": "ATL.H", "供应商": "Direct Jobs", "等级": "C", "合规标签": "合规", "不合规原因": "", "日均使用人数": 35, "分拣工时薪": 16.0, "markup": 20, "分拣工结算价": 19.2, "报价竞争力得分": 63, "派遣满足率得分": 40, "考勤准确率得分": 60, "人员稳定率得分": 100, "定量考核总分": 61, "总分": 51, "报价竞争力": 1.0237, "派遣满足率": 0.8, "考勤准确率": 0.868, "人员稳定率": 0.622, "onsite_manager_管理幅宽": 0.0, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "工人质量比较好", "扣分汇总": "Onsite Mgr：-10分", "扣分明细列表": [{"项目": "Onsite Mgr", "扣分": -10}], "扣分总计": -10, "报价竞争力_pct": 102.4, "派遣满足率_pct": 80.0, "考勤准确率_pct": 86.8, "人员稳定率_pct": 62.2}, {"大区": "MS 中南大区", "仓库": "ATL.H", "供应商": "EMEC", "等级": "D", "合规标签": "合规", "不合规原因": "", "日均使用人数": 13, "分拣工时薪": 16.0, "markup": 23, "分拣工结算价": 19.7, "报价竞争力得分": 54, "派遣满足率得分": 0, "考勤准确率得分": 65, "人员稳定率得分": 100, "定量考核总分": 44, "总分": 34, "报价竞争力": 1.0548, "派遣满足率": 0.0, "考勤准确率": 0.884, "人员稳定率": 1.0, "onsite_manager_管理幅宽": 0.0, "不积极响应配合": 2, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "没有要过人，他们没有供人能力", "扣分汇总": "响应配合：-10分", "扣分明细列表": [{"项目": "响应配合", "扣分": -10}], "扣分总计": -10, "报价竞争力_pct": 105.5, "派遣满足率_pct": 0.0, "考勤准确率_pct": 88.4, "人员稳定率_pct": 100.0}, {"大区": "MS 中南大区", "仓库": "ATL.H", "供应商": "Employer Solutions Services", "等级": "C", "合规标签": "合规", "不合规原因": "", "日均使用人数": 59, "分拣工时薪": 16.0, "markup": 23, "分拣工结算价": 19.7, "报价竞争力得分": 54, "派遣满足率得分": 40, "考勤准确率得分": 44, "人员稳定率得分": 100, "定量考核总分": 55, "总分": 45, "报价竞争力": 1.0548, "派遣满足率": 0.8, "考勤准确率": 0.812, "人员稳定率": 0.618, "onsite_manager_管理幅宽": 0.0, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "但工人质量堪忧", "扣分汇总": "Onsite Mgr：-10分", "扣分明细列表": [{"项目": "Onsite Mgr", "扣分": -10}], "扣分总计": -10, "报价竞争力_pct": 105.5, "派遣满足率_pct": 80.0, "考勤准确率_pct": 81.2, "人员稳定率_pct": 61.8}, {"大区": "MS 中南大区", "仓库": "ATL.H", "供应商": "JC-SL(Greatfast)", "等级": "D", "合规标签": "合规", "不合规原因": "", "日均使用人数": 50, "分拣工时薪": 15.0, "markup": 20, "分拣工结算价": 18.0, "报价竞争力得分": 81, "派遣满足率得分": 55, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 58, "总分": 18, "报价竞争力": 0.9647, "派遣满足率": 0.85, "考勤准确率": 0.784, "人员稳定率": 0.772, "onsite_manager_管理幅宽": 0.0, "不积极响应配合": 2, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 1, "备注": "", "扣分汇总": "Onsite Mgr：-10分、响应配合：-10分、不按时发薪：-20分", "扣分明细列表": [{"项目": "Onsite Mgr", "扣分": -10}, {"项目": "响应配合", "扣分": -10}, {"项目": "不按时发薪", "扣分": -20}], "扣分总计": -40, "报价竞争力_pct": 96.5, "派遣满足率_pct": 85.0, "考勤准确率_pct": 78.4, "人员稳定率_pct": 77.2}, {"大区": "MS 中南大区", "仓库": "ATL.H", "供应商": "Imperial", "等级": "B", "合规标签": "合规", "不合规原因": "", "日均使用人数": 106, "分拣工时薪": 16.0, "markup": 22, "分拣工结算价": 19.5, "报价竞争力得分": 56, "派遣满足率得分": 85, "考勤准确率得分": 47, "人员稳定率得分": 100, "定量考核总分": 75, "总分": 65, "报价竞争力": 1.0462, "派遣满足率": 0.95, "考勤准确率": 0.823, "人员稳定率": 0.667, "onsite_manager_管理幅宽": 0.0, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "工人质量比较好，但在我们ATL用工比例较大，希望控制", "扣分汇总": "Onsite Mgr：-10分", "扣分明细列表": [{"项目": "Onsite Mgr", "扣分": -10}], "扣分总计": -10, "报价竞争力_pct": 104.6, "派遣满足率_pct": 95.0, "考勤准确率_pct": 82.3, "人员稳定率_pct": 66.7}, {"大区": "MS 中南大区", "仓库": "ATL.H", "供应商": "Luxor", "等级": "C", "合规标签": "合规", "不合规原因": "", "日均使用人数": 9, "分拣工时薪": 16.0, "markup": 22, "分拣工结算价": 19.5, "报价竞争力得分": 56, "派遣满足率得分": 0, "考勤准确率得分": 65, "人员稳定率得分": 100, "定量考核总分": 44, "总分": 44, "报价竞争力": 1.0462, "派遣满足率": 0.0, "考勤准确率": 0.882, "人员稳定率": 1.0, "onsite_manager_管理幅宽": 0.0, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "没要人，工人质量奇差，遭到分拣组抵制", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 104.6, "派遣满足率_pct": 0.0, "考勤准确率_pct": 88.2, "人员稳定率_pct": 100.0}, {"大区": "MS 中南大区", "仓库": "ATL.H", "供应商": "RAPID", "等级": "C", "合规标签": "合规", "不合规原因": "", "日均使用人数": 17, "分拣工时薪": 15.0, "markup": 20, "分拣工结算价": 18.0, "报价竞争力得分": 81, "派遣满足率得分": 55, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 58, "总分": 58, "报价竞争力": 0.9647, "派遣满足率": 0.85, "考勤准确率": 0.614, "人员稳定率": 0.571, "onsite_manager_管理幅宽": 0.0, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "被拉黑了", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 96.5, "派遣满足率_pct": 85.0, "考勤准确率_pct": 61.4, "人员稳定率_pct": 57.1}, {"大区": "MS 中南大区", "仓库": "ATL.H", "供应商": "XPS", "等级": "D", "合规标签": "合规", "不合规原因": "", "日均使用人数": 6, "分拣工时薪": 15.0, "markup": 20, "分拣工结算价": 18.0, "报价竞争力得分": 81, "派遣满足率得分": 0, "考勤准确率得分": 0, "人员稳定率得分": 0, "定量考核总分": 16, "总分": 16, "报价竞争力": 0.9647, "派遣满足率": 0.5, "考勤准确率": 0.784, "人员稳定率": 0.087, "onsite_manager_管理幅宽": 0.0, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "刚开始的时候完全爆雷，但是后来有好转", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 96.5, "派遣满足率_pct": 50.0, "考勤准确率_pct": 78.4, "人员稳定率_pct": 8.7}, {"大区": "MS 中南大区", "仓库": "CLT.H", "供应商": "SELECT HR", "等级": "B", "合规标签": "合规", "不合规原因": "", "日均使用人数": 14, "分拣工时薪": 15.0, "markup": 20, "分拣工结算价": 18.0, "报价竞争力得分": 81, "派遣满足率得分": 85, "考勤准确率得分": 59, "人员稳定率得分": 79, "定量考核总分": 78, "总分": 78, "报价竞争力": 0.9647, "派遣满足率": 0.95, "考勤准确率": 0.862, "人员稳定率": 0.231, "onsite_manager_管理幅宽": 0.0333, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 96.5, "派遣满足率_pct": 95.0, "考勤准确率_pct": 86.2, "人员稳定率_pct": 23.1}, {"大区": "MS 中南大区", "仓库": "CLT.H", "供应商": "Employer Solutions Services", "等级": "D", "合规标签": "合规", "不合规原因": "", "日均使用人数": 2, "分拣工时薪": 15.0, "markup": 23, "分拣工结算价": 18.4, "报价竞争力得分": 73, "派遣满足率得分": 0, "考勤准确率得分": 0, "人员稳定率得分": 60, "定量考核总分": 27, "总分": 27, "报价竞争力": 0.9889, "派遣满足率": 0.0, "考勤准确率": 0.5, "人员稳定率": 0.167, "onsite_manager_管理幅宽": 0.0, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 98.9, "派遣满足率_pct": 0.0, "考勤准确率_pct": 50.0, "人员稳定率_pct": 16.7}, {"大区": "MS 中南大区", "仓库": "CLT.H", "供应商": "JC-SL(Greatfast)", "等级": "C", "合规标签": "合规", "不合规原因": "", "日均使用人数": 4, "分拣工时薪": 15.0, "markup": 20, "分拣工结算价": 18.0, "报价竞争力得分": 81, "派遣满足率得分": 55, "考勤准确率得分": 64, "人员稳定率得分": 100, "定量考核总分": 71, "总分": 51, "报价竞争力": 0.9647, "派遣满足率": 0.85, "考勤准确率": 0.881, "人员稳定率": 0.333, "onsite_manager_管理幅宽": 0.0, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 1, "备注": "", "扣分汇总": "不按时发薪：-20分", "扣分明细列表": [{"项目": "不按时发薪", "扣分": -20}], "扣分总计": -20, "报价竞争力_pct": 96.5, "派遣满足率_pct": 85.0, "考勤准确率_pct": 88.1, "人员稳定率_pct": 33.3}, {"大区": "MS 中南大区", "仓库": "CLT.H", "供应商": "Imperial", "等级": "B", "合规标签": "合规", "不合规原因": "", "日均使用人数": 58, "分拣工时薪": 15.0, "markup": 22, "分拣工结算价": 18.3, "报价竞争力得分": 76, "派遣满足率得分": 70, "考勤准确率得分": 76, "人员稳定率得分": 100, "定量考核总分": 78, "总分": 68, "报价竞争力": 0.9808, "派遣满足率": 0.9, "考勤准确率": 0.921, "人员稳定率": 0.754, "onsite_manager_管理幅宽": 0.0, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "Onsite Mgr：-10分", "扣分明细列表": [{"项目": "Onsite Mgr", "扣分": -10}], "扣分总计": -10, "报价竞争力_pct": 98.1, "派遣满足率_pct": 90.0, "考勤准确率_pct": 92.1, "人员稳定率_pct": 75.4}, {"大区": "MS 中南大区", "仓库": "CLT.H", "供应商": "Luxor", "等级": "B", "合规标签": "合规", "不合规原因": "", "日均使用人数": 45, "分拣工时薪": 15.0, "markup": 22, "分拣工结算价": 18.3, "报价竞争力得分": 76, "派遣满足率得分": 76, "考勤准确率得分": 68, "人员稳定率得分": 100, "定量考核总分": 79, "总分": 69, "报价竞争力": 0.9808, "派遣满足率": 0.92, "考勤准确率": 0.892, "人员稳定率": 0.552, "onsite_manager_管理幅宽": 0.0, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "Onsite Mgr：-10分", "扣分明细列表": [{"项目": "Onsite Mgr", "扣分": -10}], "扣分总计": -10, "报价竞争力_pct": 98.1, "派遣满足率_pct": 92.0, "考勤准确率_pct": 89.2, "人员稳定率_pct": 55.2}], "NE 东北大区": [{"大区": "NE 东北大区", "仓库": "EWR.H", "供应商": "CRD", "等级": "B", "合规标签": "合规", "不合规原因": "", "日均使用人数": 57, "分拣工时薪": 16.0, "markup": 16, "分拣工结算价": 18.5, "报价竞争力得分": 90, "派遣满足率得分": 100, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 78, "总分": 78, "报价竞争力": 0.932, "派遣满足率": 1.12, "考勤准确率": 0.001, "人员稳定率": 0.776, "onsite_manager_管理幅宽": 0.072, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "已清退，午休卡未管控", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 93.2, "派遣满足率_pct": 112.0, "考勤准确率_pct": 0.1, "人员稳定率_pct": 77.6}, {"大区": "NE 东北大区", "仓库": "EWR.H", "供应商": "Direct Jobs", "等级": "C", "合规标签": "合规", "不合规原因": "", "日均使用人数": 26, "分拣工时薪": 15.9, "markup": 20, "分拣工结算价": 19.1, "报价竞争力得分": 81, "派遣满足率得分": 53, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 57, "总分": 57, "报价竞争力": 0.9622, "派遣满足率": 0.8422, "考勤准确率": 0.0, "人员稳定率": 0.368, "onsite_manager_管理幅宽": 0.118, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 96.2, "派遣满足率_pct": 84.2, "考勤准确率_pct": 0.0, "人员稳定率_pct": 36.8}, {"大区": "NE 东北大区", "仓库": "EWR.H", "供应商": "Imperial", "等级": "C", "合规标签": "合规", "不合规原因": "", "日均使用人数": 35, "分拣工时薪": 16.0, "markup": 20, "分拣工结算价": 19.2, "报价竞争力得分": 80, "派遣满足率得分": 57, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 59, "总分": 54, "报价竞争力": 0.9673, "派遣满足率": 0.8569, "考勤准确率": 0.0, "人员稳定率": 0.538, "onsite_manager_管理幅宽": 0.059, "不积极响应配合": 1, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "午休卡未管控", "扣分汇总": "响应配合：-5分", "扣分明细列表": [{"项目": "响应配合", "扣分": -5}], "扣分总计": -5, "报价竞争力_pct": 96.7, "派遣满足率_pct": 85.7, "考勤准确率_pct": 0.0, "人员稳定率_pct": 53.8}, {"大区": "NE 东北大区", "仓库": "EWR.H", "供应商": "LONG RIVER", "等级": "B", "合规标签": "合规", "不合规原因": "", "日均使用人数": 206, "分拣工时薪": 16.0, "markup": 19, "分拣工结算价": 19.0, "报价竞争力得分": 83, "派遣满足率得分": 100, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 77, "总分": 72, "报价竞争力": 0.9572, "派遣满足率": 1.1689, "考勤准确率": 0.002, "人员稳定率": 0.588, "onsite_manager_管理幅宽": 0.02, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "午休卡未管控", "扣分汇总": "Onsite Mgr：-5分", "扣分明细列表": [{"项目": "Onsite Mgr", "扣分": -5}], "扣分总计": -5, "报价竞争力_pct": 95.7, "派遣满足率_pct": 116.9, "考勤准确率_pct": 0.2, "人员稳定率_pct": 58.8}, {"大区": "NE 东北大区", "仓库": "EWR.H", "供应商": "Qianyi", "等级": "A", "合规标签": "合规", "不合规原因": "", "日均使用人数": 307, "分拣工时薪": 15.9, "markup": 16, "分拣工结算价": 18.5, "报价竞争力得分": 90, "派遣满足率得分": 100, "考勤准确率得分": 81, "人员稳定率得分": 100, "定量考核总分": 94, "总分": 89, "报价竞争力": 0.932, "派遣满足率": 1.1695, "考勤准确率": 0.936, "人员稳定率": 0.85, "onsite_manager_管理幅宽": 0.023, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "Onsite Mgr：-5分", "扣分明细列表": [{"项目": "Onsite Mgr", "扣分": -5}], "扣分总计": -5, "报价竞争力_pct": 93.2, "派遣满足率_pct": 117.0, "考勤准确率_pct": 93.6, "人员稳定率_pct": 85.0}, {"大区": "NE 东北大区", "仓库": "EWR.H", "供应商": "Z&Z", "等级": "B", "合规标签": "合规", "不合规原因": "", "日均使用人数": 247, "分拣工时薪": 15.9, "markup": 16, "分拣工结算价": 18.5, "报价竞争力得分": 90, "派遣满足率得分": 100, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 78, "总分": 73, "报价竞争力": 0.932, "派遣满足率": 1.3116, "考勤准确率": 0.001, "人员稳定率": 0.742, "onsite_manager_管理幅宽": 0.021, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "午休卡未管控", "扣分汇总": "Onsite Mgr：-5分", "扣分明细列表": [{"项目": "Onsite Mgr", "扣分": -5}], "扣分总计": -5, "报价竞争力_pct": 93.2, "派遣满足率_pct": 131.2, "考勤准确率_pct": 0.1, "人员稳定率_pct": 74.2}, {"大区": "NE 东北大区", "仓库": "JFK.H", "供应商": "APEX", "等级": "B", "合规标签": "合规", "不合规原因": "", "日均使用人数": 15, "分拣工时薪": 17.0, "markup": 35, "分拣工结算价": 23.0, "报价竞争力得分": 0, "派遣满足率得分": 100, "考勤准确率得分": 52, "人员稳定率得分": 100, "定量考核总分": 70, "总分": 65, "报价竞争力": 1.1587, "派遣满足率": 0.9996, "考勤准确率": 0.839, "人员稳定率": 0.556, "onsite_manager_管理幅宽": 0.058, "不积极响应配合": 1, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "响应配合：-5分", "扣分明细列表": [{"项目": "响应配合", "扣分": -5}], "扣分总计": -5, "报价竞争力_pct": 115.9, "派遣满足率_pct": 100.0, "考勤准确率_pct": 83.9, "人员稳定率_pct": 55.6}, {"大区": "NE 东北大区", "仓库": "JFK.H", "供应商": "PRIMAL", "等级": "C", "合规标签": "不合规", "不合规原因": "No Workers' Compensation Coverage Exists for this Employer on the checker", "日均使用人数": 54, "分拣工时薪": 17.0, "markup": 35, "分拣工结算价": 23.0, "报价竞争力得分": 0, "派遣满足率得分": 100, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 60, "总分": 59, "报价竞争力": 1.1587, "派遣满足率": 1.0017, "考勤准确率": 0.739, "人员稳定率": 0.702, "onsite_manager_管理幅宽": 0.048, "不积极响应配合": 0, "不配合结账": 1, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "结账配合：-1分", "扣分明细列表": [{"项目": "结账配合", "扣分": -1}], "扣分总计": -1, "报价竞争力_pct": 115.9, "派遣满足率_pct": 100.2, "考勤准确率_pct": 73.9, "人员稳定率_pct": 70.2}], "TX 德州大区": [{"大区": "TX 德州大区", "仓库": "DFW.H", "供应商": "B&A", "等级": "B", "合规标签": "不合规", "不合规原因": "this insurance company does not offer workers comp", "日均使用人数": 56, "分拣工时薪": 14.0, "markup": 14, "分拣工结算价": 16.0, "报价竞争力得分": 70, "派遣满足率得分": 80, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 66, "总分": 66, "报价竞争力": 1.0, "派遣满足率": 0.9327, "考勤准确率": 0.298, "人员稳定率": 0.31, "onsite_manager_管理幅宽": 0.0381, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "相对配合度较高", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 100.0, "派遣满足率_pct": 93.3, "考勤准确率_pct": 29.8, "人员稳定率_pct": 31.0}, {"大区": "TX 德州大区", "仓库": "DFW.H", "供应商": "Fasthorse", "等级": "C", "合规标签": "合规", "不合规原因": "", "日均使用人数": 44, "分拣工时薪": 13.0, "markup": 15, "分拣工结算价": 15.0, "报价竞争力得分": 89, "派遣满足率得分": 100, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 78, "总分": 58, "报价竞争力": 0.9375, "派遣满足率": 1.0769, "考勤准确率": 0.514, "人员稳定率": 0.678, "onsite_manager_管理幅宽": 0.0263, "不积极响应配合": 1, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "无法配合要求拉通两个班次", "扣分汇总": "Onsite Mgr：-5分、响应配合：-5分、库内管理：-10分", "扣分明细列表": [{"项目": "Onsite Mgr", "扣分": -5}, {"项目": "响应配合", "扣分": -5}, {"项目": "库内管理", "扣分": -10}], "扣分总计": -20, "报价竞争力_pct": 93.8, "派遣满足率_pct": 107.7, "考勤准确率_pct": 51.4, "人员稳定率_pct": 67.8}, {"大区": "TX 德州大区", "仓库": "DFW.H", "供应商": "Loyalty", "等级": "B", "合规标签": "合规", "不合规原因": "", "日均使用人数": 20, "分拣工时薪": 14.0, "markup": 14, "分拣工结算价": 16.0, "报价竞争力得分": 70, "派遣满足率得分": 100, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 74, "总分": 74, "报价竞争力": 1.0, "派遣满足率": 1.2419, "考勤准确率": 0.416, "人员稳定率": 0.612, "onsite_manager_管理幅宽": 0.1023, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 100.0, "派遣满足率_pct": 124.2, "考勤准确率_pct": 41.6, "人员稳定率_pct": 61.2}, {"大区": "TX 德州大区", "仓库": "DFW.H", "供应商": "Makers", "等级": "B", "合规标签": "不合规", "不合规原因": "insurance not showing up on the coverage checker", "日均使用人数": 3, "分拣工时薪": 14.0, "markup": 14, "分拣工结算价": 16.0, "报价竞争力得分": 70, "派遣满足率得分": 84, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 68, "总分": 63, "报价竞争力": 1.0, "派遣满足率": 0.9462, "考勤准确率": 0.521, "人员稳定率": 0.667, "onsite_manager_管理幅宽": 0.3602, "不积极响应配合": 1, "不配合结账": 1, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "无法配合要求拉通两个班次", "扣分汇总": "响应配合：-5分、结账配合：-1分", "扣分明细列表": [{"项目": "响应配合", "扣分": -5}, {"项目": "结账配合", "扣分": -1}], "扣分总计": -6, "报价竞争力_pct": 100.0, "派遣满足率_pct": 94.6, "考勤准确率_pct": 52.1, "人员稳定率_pct": 66.7}, {"大区": "TX 德州大区", "仓库": "IAH.H", "供应商": "Grace hymn", "等级": "B", "合规标签": "合规", "不合规原因": "", "日均使用人数": 32, "分拣工时薪": 15.0, "markup": 13, "分拣工结算价": 17.0, "报价竞争力得分": 51, "派遣满足率得分": 76, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 61, "总分": 61, "报价竞争力": 1.0625, "派遣满足率": 0.9193, "考勤准确率": 0.58, "人员稳定率": 0.579, "onsite_manager_管理幅宽": 0.1275, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "工人存在偷懒早退的情况， Manager与站点并不能有效沟通。有些劳务工存在偷包情况", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 106.2, "派遣满足率_pct": 91.9, "考勤准确率_pct": 58.0, "人员稳定率_pct": 57.9}, {"大区": "TX 德州大区", "仓库": "IAH.H", "供应商": "Fast Staff", "等级": "D", "合规标签": "合规", "不合规原因": "", "日均使用人数": 24, "分拣工时薪": 13.0, "markup": 23, "分拣工结算价": 16.0, "报价竞争力得分": 70, "派遣满足率得分": 61, "考勤准确率得分": 0, "人员稳定率得分": 0, "定量考核总分": 38, "总分": 38, "报价竞争力": 1.0, "派遣满足率": 0.8708, "考勤准确率": 0.628, "人员稳定率": 0.0, "onsite_manager_管理幅宽": 0.1395, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "5/25开始使用", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 100.0, "派遣满足率_pct": 87.1, "考勤准确率_pct": 62.8, "人员稳定率_pct": 0.0}], "WE 美西大区": [{"大区": "WE 美西大区", "仓库": "CNO.H", "供应商": "A-Share", "等级": "A", "合规标签": "合规", "不合规原因": "", "日均使用人数": 21, "分拣工时薪": 17.9, "markup": 6, "分拣工结算价": 19.0, "报价竞争力得分": 78, "派遣满足率得分": 100, "考勤准确率得分": 78, "人员稳定率得分": 100, "定量考核总分": 91, "总分": 91, "报价竞争力": 0.9749, "派遣满足率": 1.0, "考勤准确率": 0.927, "人员稳定率": 0.529, "onsite_manager_管理幅宽": 0.107, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 97.5, "派遣满足率_pct": 100.0, "考勤准确率_pct": 92.7, "人员稳定率_pct": 52.9}, {"大区": "WE 美西大区", "仓库": "CNO.H", "供应商": "AAS", "等级": "B", "合规标签": "合规", "不合规原因": "", "日均使用人数": 11, "分拣工时薪": 17.0, "markup": 12, "分拣工结算价": 19.0, "报价竞争力得分": 78, "派遣满足率得分": 57, "考勤准确率得分": 61, "人员稳定率得分": 100, "定量考核总分": 70, "总分": 70, "报价竞争力": 0.9749, "派遣满足率": 0.8554, "考勤准确率": 0.87, "人员稳定率": 0.343, "onsite_manager_管理幅宽": 0.106, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 97.5, "派遣满足率_pct": 85.5, "考勤准确率_pct": 87.0, "人员稳定率_pct": 34.3}, {"大区": "WE 美西大区", "仓库": "CNO.H", "供应商": "Direct Jobs", "等级": "C", "合规标签": "合规", "不合规原因": "", "日均使用人数": 41, "分拣工时薪": 17.0, "markup": 17, "分拣工结算价": 19.9, "报价竞争力得分": 64, "派遣满足率得分": 61, "考勤准确率得分": 60, "人员稳定率得分": 100, "定量考核总分": 69, "总分": 54, "报价竞争力": 1.0205, "派遣满足率": 0.8701, "考勤准确率": 0.867, "人员稳定率": 0.483, "onsite_manager_管理幅宽": 0.056, "不积极响应配合": 3, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "响应配合：-15分", "扣分明细列表": [{"项目": "响应配合", "扣分": -15}], "扣分总计": -15, "报价竞争力_pct": 102.0, "派遣满足率_pct": 87.0, "考勤准确率_pct": 86.7, "人员稳定率_pct": 48.3}, {"大区": "WE 美西大区", "仓库": "CNO.H", "供应商": "Flash Way", "等级": "B", "合规标签": "合规", "不合规原因": "", "日均使用人数": 2, "分拣工时薪": 17.8, "markup": 10, "分拣工结算价": 19.6, "报价竞争力得分": 69, "派遣满足率得分": 100, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 74, "总分": 74, "报价竞争力": 1.0031, "派遣满足率": 1.0, "考勤准确率": 0.265, "人员稳定率": 1.0, "onsite_manager_管理幅宽": 0.0, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "仅是提供2名现场支持人员", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 100.3, "派遣满足率_pct": 100.0, "考勤准确率_pct": 26.5, "人员稳定率_pct": 100.0}, {"大区": "WE 美西大区", "仓库": "CNO.H", "供应商": "J&S Out Front", "等级": "B", "合规标签": "合规", "不合规原因": "", "日均使用人数": 45, "分拣工时薪": 16.5, "markup": 15, "分拣工结算价": 19.0, "报价竞争力得分": 78, "派遣满足率得分": 100, "考勤准确率得分": 76, "人员稳定率得分": 100, "定量考核总分": 91, "总分": 61, "报价竞争力": 0.9749, "派遣满足率": 1.0, "考勤准确率": 0.919, "人员稳定率": 0.643, "onsite_manager_管理幅宽": 0.023, "不积极响应配合": 3, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 2, "不按时发薪": 0, "备注": "", "扣分汇总": "Onsite Mgr：-5分、响应配合：-15分、擅自离岗：-10分", "扣分明细列表": [{"项目": "Onsite Mgr", "扣分": -5}, {"项目": "响应配合", "扣分": -15}, {"项目": "擅自离岗", "扣分": -10}], "扣分总计": -30, "报价竞争力_pct": 97.5, "派遣满足率_pct": 100.0, "考勤准确率_pct": 91.9, "人员稳定率_pct": 64.3}, {"大区": "WE 美西大区", "仓库": "CNO.H", "供应商": "JC-SL(Greatfast)", "等级": "C", "合规标签": "合规", "不合规原因": "", "日均使用人数": 73, "分拣工时薪": 17.9, "markup": 6, "分拣工结算价": 19.0, "报价竞争力得分": 78, "派遣满足率得分": 63, "考勤准确率得分": 71, "人员稳定率得分": 100, "定量考核总分": 75, "总分": 45, "报价竞争力": 0.9749, "派遣满足率": 0.8754, "考勤准确率": 0.904, "人员稳定率": 0.56, "onsite_manager_管理幅宽": 0.028, "不积极响应配合": 3, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "Onsite Mgr：-5分、响应配合：-15分、库内管理：-10分", "扣分明细列表": [{"项目": "Onsite Mgr", "扣分": -5}, {"项目": "响应配合", "扣分": -15}, {"项目": "库内管理", "扣分": -10}], "扣分总计": -30, "报价竞争力_pct": 97.5, "派遣满足率_pct": 87.5, "考勤准确率_pct": 90.4, "人员稳定率_pct": 56.0}, {"大区": "WE 美西大区", "仓库": "CNO.H", "供应商": "Reliant", "等级": "C", "合规标签": "合规", "不合规原因": "", "日均使用人数": 5, "分拣工时薪": 0.0, "markup": 0, "分拣工结算价": 0.0, "报价竞争力得分": 70, "派遣满足率得分": 57, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 57, "总分": 57, "报价竞争力": 1.0, "派遣满足率": 0.8571, "考勤准确率": 0.783, "人员稳定率": 0.3, "onsite_manager_管理幅宽": 0.0, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "仅使用叉车工，未计入报价平均值", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 100.0, "派遣满足率_pct": 85.7, "考勤准确率_pct": 78.3, "人员稳定率_pct": 30.0}, {"大区": "WE 美西大区", "仓库": "CNO.H", "供应商": "Select Hire", "等级": "A", "合规标签": "合规", "不合规原因": "", "日均使用人数": 5, "分拣工时薪": 0.0, "markup": 0, "分拣工结算价": 0.0, "报价竞争力得分": 70, "派遣满足率得分": 100, "考勤准确率得分": 63, "人员稳定率得分": 100, "定量考核总分": 87, "总分": 87, "报价竞争力": 1.0, "派遣满足率": 1.0, "考勤准确率": 0.878, "人员稳定率": 0.5, "onsite_manager_管理幅宽": 0.21, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "仅使用叉车工，未计入报价平均值", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 100.0, "派遣满足率_pct": 100.0, "考勤准确率_pct": 87.8, "人员稳定率_pct": 50.0}, {"大区": "WE 美西大区", "仓库": "LAV.H", "供应商": "JC-SL(Greatfast)", "等级": "C", "合规标签": "合规", "不合规原因": "", "日均使用人数": 96, "分拣工时薪": 17.9, "markup": 6, "分拣工结算价": 19.0, "报价竞争力得分": 78, "派遣满足率得分": 0, "考勤准确率得分": 83, "人员稳定率得分": 100, "定量考核总分": 52, "总分": 51, "报价竞争力": 0.9749, "派遣满足率": 0.671, "考勤准确率": 0.944, "人员稳定率": 0.878, "onsite_manager_管理幅宽": 0.063, "不积极响应配合": 0, "不配合结账": 1, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "结账配合：-1分", "扣分明细列表": [{"项目": "结账配合", "扣分": -1}], "扣分总计": -1, "报价竞争力_pct": 97.5, "派遣满足率_pct": 67.1, "考勤准确率_pct": 94.4, "人员稳定率_pct": 87.8}, {"大区": "WE 美西大区", "仓库": "LAV.H", "供应商": "Reliant", "等级": "B", "合规标签": "合规", "不合规原因": "", "日均使用人数": 38, "分拣工时薪": 17.0, "markup": 17, "分拣工结算价": 19.9, "报价竞争力得分": 64, "派遣满足率得分": 100, "考勤准确率得分": 85, "人员稳定率得分": 100, "定量考核总分": 90, "总分": 80, "报价竞争力": 1.0205, "派遣满足率": 1.0, "考勤准确率": 0.949, "人员稳定率": 0.786, "onsite_manager_管理幅宽": 0.0, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "Onsite Mgr：-10分", "扣分明细列表": [{"项目": "Onsite Mgr", "扣分": -10}], "扣分总计": -10, "报价竞争力_pct": 102.0, "派遣满足率_pct": 100.0, "考勤准确率_pct": 94.9, "人员稳定率_pct": 78.6}, {"大区": "WE 美西大区", "仓库": "LAV.H", "供应商": "Select Hire", "等级": "D", "合规标签": "合规", "不合规原因": "", "日均使用人数": 11, "分拣工时薪": 17.0, "markup": 15, "分拣工结算价": 19.6, "报价竞争力得分": 69, "派遣满足率得分": 0, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 34, "总分": 34, "报价竞争力": 1.0031, "派遣满足率": 0.5413, "考勤准确率": 0.733, "人员稳定率": 0.621, "onsite_manager_管理幅宽": 0.12, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 100.3, "派遣满足率_pct": 54.1, "考勤准确率_pct": 73.3, "人员稳定率_pct": 62.1}, {"大区": "WE 美西大区", "仓库": "LAV.H", "供应商": "TG", "等级": "C", "合规标签": "不合规", "不合规原因": "No Workers' Compensation Coverage Exists for this Employer on the checker", "日均使用人数": 90, "分拣工时薪": 18.1, "markup": 5, "分拣工结算价": 19.0, "报价竞争力得分": 78, "派遣满足率得分": 0, "考勤准确率得分": 82, "人员稳定率得分": 100, "定量考核总分": 52, "总分": 52, "报价竞争力": 0.9749, "派遣满足率": 0.5, "考勤准确率": 0.939, "人员稳定率": 0.718, "onsite_manager_管理幅宽": 0.056, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 97.5, "派遣满足率_pct": 50.0, "考勤准确率_pct": 93.9, "人员稳定率_pct": 71.8}, {"大区": "WE 美西大区", "仓库": "SEA.H", "供应商": "Imperial", "等级": "A", "合规标签": "合规", "不合规原因": "", "日均使用人数": 26, "分拣工时薪": 17.5, "markup": 16, "分拣工结算价": 20.3, "报价竞争力得分": 58, "派遣满足率得分": 100, "考勤准确率得分": 72, "人员稳定率得分": 100, "定量考核总分": 86, "总分": 86, "报价竞争力": 1.0416, "派遣满足率": 1.0, "考勤准确率": 0.906, "人员稳定率": 0.485, "onsite_manager_管理幅宽": 0.051, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "实际派遣满足率是超过100%", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 104.2, "派遣满足率_pct": 100.0, "考勤准确率_pct": 90.6, "人员稳定率_pct": 48.5}, {"大区": "WE 美西大区", "仓库": "SEA.H", "供应商": "Select Hire", "等级": "A", "合规标签": "合规", "不合规原因": "", "日均使用人数": 19, "分拣工时薪": 17.5, "markup": 17, "分拣工结算价": 20.5, "报价竞争力得分": 69, "派遣满足率得分": 100, "考勤准确率得分": 65, "人员稳定率得分": 100, "定量考核总分": 87, "总分": 86, "报价竞争力": 1.0031, "派遣满足率": 1.0, "考勤准确率": 0.882, "人员稳定率": 0.333, "onsite_manager_管理幅宽": 0.079, "不积极响应配合": 0, "不配合结账": 1, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "实际派遣满足率是超过100%", "扣分汇总": "结账配合：-1分", "扣分明细列表": [{"项目": "结账配合", "扣分": -1}], "扣分总计": -1, "报价竞争力_pct": 100.3, "派遣满足率_pct": 100.0, "考勤准确率_pct": 88.2, "人员稳定率_pct": 33.3}, {"大区": "WE 美西大区", "仓库": "DEN.H", "供应商": "April Flower", "等级": "A", "合规标签": "合规", "不合规原因": "", "日均使用人数": 46, "分拣工时薪": 16.0, "markup": 20, "分拣工结算价": 19.2, "报价竞争力得分": 74, "派遣满足率得分": 100, "考勤准确率得分": 58, "人员稳定率得分": 100, "定量考核总分": 86, "总分": 86, "报价竞争力": 0.9851, "派遣满足率": 1.0, "考勤准确率": 0.859, "人员稳定率": 0.477, "onsite_manager_管理幅宽": 0.047, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 98.5, "派遣满足率_pct": 100.0, "考勤准确率_pct": 85.9, "人员稳定率_pct": 47.7}, {"大区": "WE 美西大区", "仓库": "DEN.H", "供应商": "April Flower", "等级": "A", "合规标签": "合规", "不合规原因": "", "日均使用人数": 46, "分拣工时薪": 16.0, "markup": 20, "分拣工结算价": 19.2, "报价竞争力得分": 74, "派遣满足率得分": 100, "考勤准确率得分": 58, "人员稳定率得分": 100, "定量考核总分": 86, "总分": 86, "报价竞争力": 0.9851, "派遣满足率": 1.0, "考勤准确率": 0.859, "人员稳定率": 0.477, "onsite_manager_管理幅宽": 0.047, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 98.5, "派遣满足率_pct": 100.0, "考勤准确率_pct": 85.9, "人员稳定率_pct": 47.7}], "Ground项目部": [{"大区": "Ground项目部", "仓库": "ATL.G", "供应商": "Imperial", "等级": "C", "合规标签": "合规", "不合规原因": "", "日均使用人数": 2, "分拣工时薪": 16.0, "markup": 22, "分拣工结算价": 19.5, "报价竞争力得分": 95, "派遣满足率得分": 40, "考勤准确率得分": 0, "人员稳定率得分": 85, "定量考核总分": 52, "总分": 47, "报价竞争力": 0.916, "派遣满足率": 0.8, "考勤准确率": 0.465, "人员稳定率": 0.25, "onsite_manager_管理幅宽": 0.0, "不积极响应配合": 1, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "公司不积极提供coi，需要仓长反复催促", "扣分汇总": "响应配合：-5分", "扣分明细列表": [{"项目": "响应配合", "扣分": -5}], "扣分总计": -5, "报价竞争力_pct": 91.6, "派遣满足率_pct": 80.0, "考勤准确率_pct": 46.5, "人员稳定率_pct": 25.0}, {"大区": "Ground项目部", "仓库": "CNO.G", "供应商": "AAS", "等级": "A", "合规标签": "合规", "不合规原因": "", "日均使用人数": 1, "分拣工时薪": 18.0, "markup": 19, "分拣工结算价": 21.4, "报价竞争力得分": 68, "派遣满足率得分": 100, "考勤准确率得分": 100, "人员稳定率得分": 100, "定量考核总分": 94, "总分": 94, "报价竞争力": 1.0052, "派遣满足率": 1.0, "考勤准确率": 1.0, "人员稳定率": 1.0, "onsite_manager_管理幅宽": 0.0, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 100.5, "派遣满足率_pct": 100.0, "考勤准确率_pct": 100.0, "人员稳定率_pct": 100.0}, {"大区": "Ground项目部", "仓库": "CNO.G", "供应商": "Direct Jobs", "等级": "C", "合规标签": "合规", "不合规原因": "", "日均使用人数": 3, "分拣工时薪": 17.0, "markup": 17, "分拣工结算价": 19.9, "报价竞争力得分": 90, "派遣满足率得分": 0, "考勤准确率得分": 59, "人员稳定率得分": 100, "定量考核总分": 50, "总分": 50, "报价竞争力": 0.9334, "派遣满足率": 0.2, "考勤准确率": 0.862, "人员稳定率": 0.667, "onsite_manager_管理幅宽": 0.0, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 93.3, "派遣满足率_pct": 20.0, "考勤准确率_pct": 86.2, "人员稳定率_pct": 66.7}, {"大区": "Ground项目部", "仓库": "CNO.G", "供应商": "ERC", "等级": "C", "合规标签": "合规", "不合规原因": "", "日均使用人数": 1, "分拣工时薪": 18.0, "markup": 20, "分拣工结算价": 21.6, "报价竞争力得分": 66, "派遣满足率得分": 0, "考勤准确率得分": 79, "人员稳定率得分": 100, "定量考核总分": 49, "总分": 49, "报价竞争力": 1.0136, "派遣满足率": 0.6, "考勤准确率": 0.929, "人员稳定率": 1.0, "onsite_manager_管理幅宽": 0.0, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 101.4, "派遣满足率_pct": 60.0, "考勤准确率_pct": 92.9, "人员稳定率_pct": 100.0}, {"大区": "Ground项目部", "仓库": "CNO.G", "供应商": "J&S Out Front", "等级": "A", "合规标签": "合规", "不合规原因": "", "日均使用人数": 6, "分拣工时薪": 0.0, "markup": 0, "分拣工结算价": 0.0, "报价竞争力得分": 70, "派遣满足率得分": 100, "考勤准确率得分": 41, "人员稳定率得分": 100, "定量考核总分": 82, "总分": 82, "报价竞争力": 1.0, "派遣满足率": 1.0, "考勤准确率": 0.802, "人员稳定率": 0.667, "onsite_manager_管理幅宽": 0.0333, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "仅使用叉车工，未计入报价平均值", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 100.0, "派遣满足率_pct": 100.0, "考勤准确率_pct": 80.2, "人员稳定率_pct": 66.7}, {"大区": "Ground项目部", "仓库": "CNO.G", "供应商": "XPS", "等级": "C", "合规标签": "不合规", "不合规原因": "No Workers' Compensation Coverage Exists for this Employer on the checker", "日均使用人数": 23, "分拣工时薪": 16.9, "markup": 28, "分拣工结算价": 21.6, "报价竞争力得分": 65, "派遣满足率得分": 0, "考勤准确率得分": 43, "人员稳定率得分": 100, "定量考核总分": 42, "总分": 42, "报价竞争力": 1.0151, "派遣满足率": 0.75, "考勤准确率": 0.81, "人员稳定率": 0.465, "onsite_manager_管理幅宽": 0.0333, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 101.5, "派遣满足率_pct": 75.0, "考勤准确率_pct": 81.0, "人员稳定率_pct": 46.5}, {"大区": "Ground项目部", "仓库": "EWR.G", "供应商": "Z&Z", "等级": "A", "合规标签": "合规", "不合规原因": "", "日均使用人数": 22, "分拣工时薪": 16.0, "markup": 25, "分拣工结算价": 20.0, "报价竞争力得分": 88, "派遣满足率得分": 85, "考勤准确率得分": 64, "人员稳定率得分": 100, "定量考核总分": 84, "总分": 84, "报价竞争力": 0.9386, "派遣满足率": 0.95, "考勤准确率": 0.879, "人员稳定率": 0.467, "onsite_manager_管理幅宽": 0.0333, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 93.9, "派遣满足率_pct": 95.0, "考勤准确率_pct": 87.9, "人员稳定率_pct": 46.7}, {"大区": "Ground项目部", "仓库": "ORD.G", "供应商": "XPS", "等级": "D", "合规标签": "合规", "不合规原因": "", "日均使用人数": 3, "分拣工时薪": 17.0, "markup": 28, "分拣工结算价": 21.8, "报价竞争力得分": 64, "派遣满足率得分": 0, "考勤准确率得分": 0, "人员稳定率得分": 77, "定量考核总分": 28, "总分": 23, "报价竞争力": 1.0212, "派遣满足率": 0.6, "考勤准确率": 0.052, "人员稳定率": 0.222, "onsite_manager_管理幅宽": 0.0, "不积极响应配合": 1, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "周天人比较少，五月底后情况改善", "扣分汇总": "响应配合：-5分", "扣分明细列表": [{"项目": "响应配合", "扣分": -5}], "扣分总计": -5, "报价竞争力_pct": 102.1, "派遣满足率_pct": 60.0, "考勤准确率_pct": 5.2, "人员稳定率_pct": 22.2}, {"大区": "Ground项目部", "仓库": "SFO.G", "供应商": "Storx", "等级": "C", "合规标签": "不合规", "不合规原因": "the insurance company website explicitly states PEOs are not eligible", "日均使用人数": 3, "分拣工时薪": 19.0, "markup": 20, "分拣工结算价": 22.8, "报价竞争力得分": 49, "派遣满足率得分": 70, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 58, "总分": 58, "报价竞争力": 1.07, "派遣满足率": 0.9, "考勤准确率": 0.271, "人员稳定率": 0.545, "onsite_manager_管理幅宽": 0.0, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 107.0, "派遣满足率_pct": 90.0, "考勤准确率_pct": 27.1, "人员稳定率_pct": 54.5}, {"大区": "Ground项目部", "仓库": "SFO.G", "供应商": "XPS", "等级": "C", "合规标签": "合规", "不合规原因": "", "日均使用人数": 2, "分拣工时薪": 18.5, "markup": 28, "分拣工结算价": 23.7, "报价竞争力得分": 0, "派遣满足率得分": 70, "考勤准确率得分": 0, "人员稳定率得分": 100, "定量考核总分": 48, "总分": 48, "报价竞争力": 1.1113, "派遣满足率": 0.9, "考勤准确率": 0.358, "人员稳定率": 0.375, "onsite_manager_管理幅宽": 0.0, "不积极响应配合": 0, "不配合结账": 0, "发生现场挖人": 0, "不按时工作": 0, "不按时发薪": 0, "备注": "", "扣分汇总": "", "扣分明细列表": [], "扣分总计": 0, "报价竞争力_pct": 111.1, "派遣满足率_pct": 90.0, "考勤准确率_pct": 35.8, "人员稳定率_pct": 37.5}]}, "cost_analysis": [{"大区": "FL 佛州大区", "日均人数": 414, "供应商数": 8, "平均时薪": 13.6, "平均markup": 26, "平均结算价": 17.1, "计时成本": 2045626, "计件成本": 0, "总成本": 2045626, "总工时": 114096, "雇主成本率": 0.14, "雇主成本": 1.9, "利润_per_h": 1.6, "利润率": 9.4}, {"大区": "GL 大湖大区", "日均人数": 672, "供应商数": 6, "平均时薪": 16.0, "平均markup": 14, "平均结算价": 18.2, "计时成本": 3474408, "计件成本": 156534, "总成本": 3630943, "总工时": 186867, "雇主成本率": 0.145, "雇主成本": 2.32, "利润_per_h": -0.12, "利润率": -0.7}, {"大区": "Ground项目部", "日均人数": 66, "供应商数": 8, "平均时薪": 17.4, "平均markup": 21, "平均结算价": 21.4, "计时成本": 450091, "计件成本": 14220, "总成本": 464311, "总工时": 21049, "雇主成本率": 0.12, "雇主成本": 2.09, "利润_per_h": 1.91, "利润率": 8.9}, {"大区": "MS 中南大区", "日均人数": 419, "供应商数": 9, "平均时薪": 15.4, "平均markup": 21, "平均结算价": 18.7, "计时成本": 2294554, "计件成本": 0, "总成本": 2294554, "总工时": 114042, "雇主成本率": 0.135, "雇主成本": 2.08, "利润_per_h": 1.22, "利润率": 6.5}, {"大区": "NE 东北大区", "日均人数": 946, "供应商数": 8, "平均时薪": 16.2, "平均markup": 22, "平均结算价": 19.9, "计时成本": 5928788, "计件成本": 0, "总成本": 5928788, "总工时": 311391, "雇主成本率": 0.16, "雇主成本": 2.59, "利润_per_h": 1.11, "利润率": 5.6}, {"大区": "TX 德州大区", "日均人数": 179, "供应商数": 6, "平均时薪": 13.8, "平均markup": 16, "平均结算价": 16.0, "计时成本": 902007, "计件成本": 1314615, "总成本": 2216622, "总工时": 53723, "雇主成本率": 0.125, "雇主成本": 1.73, "利润_per_h": 0.47, "利润率": 2.9}, {"大区": "WE 美西大区", "日均人数": 574, "供应商数": 11, "平均时薪": 17.2, "平均markup": 11, "平均结算价": 19.4, "计时成本": 3839239, "计件成本": 853478, "总成本": 4692717, "总工时": 181740, "雇主成本率": 0.17, "雇主成本": 2.92, "利润_per_h": -0.72, "利润率": -3.7}], "all_supplier_detail": [{"大区": "Ground项目部", "供应商": "AAS", "日均使用人数": 1, "时薪": 18.0, "markup": 19, "结算价": 21.4, "等级": "A", "占总人数比": 1.5, "总分": 94}, {"大区": "WE 美西大区", "供应商": "A-Share", "日均使用人数": 21, "时薪": 17.9, "markup": 6, "结算价": 19.0, "等级": "A", "占总人数比": 3.7, "总分": 91}, {"大区": "NE 东北大区", "供应商": "Qianyi", "日均使用人数": 307, "时薪": 15.9, "markup": 16, "结算价": 18.5, "等级": "A", "占总人数比": 32.4, "总分": 89}, {"大区": "WE 美西大区", "供应商": "Select Hire", "日均使用人数": 35, "时薪": 17.2, "markup": 11, "结算价": 20.0, "等级": "A", "占总人数比": 6.2, "总分": 87}, {"大区": "WE 美西大区", "供应商": "April Flower", "日均使用人数": 92, "时薪": 16.0, "markup": 20, "结算价": 19.2, "等级": "A", "占总人数比": 16.0, "总分": 86}, {"大区": "WE 美西大区", "供应商": "Imperial", "日均使用人数": 26, "时薪": 17.5, "markup": 16, "结算价": 20.3, "等级": "A", "占总人数比": 4.5, "总分": 86}, {"大区": "FL 佛州大区", "供应商": "SELECT HR", "日均使用人数": 40, "时薪": 14.0, "markup": 18, "结算价": 16.5, "等级": "A", "占总人数比": 9.7, "总分": 85}, {"大区": "Ground项目部", "供应商": "Z&Z", "日均使用人数": 22, "时薪": 16.0, "markup": 25, "结算价": 20.0, "等级": "A", "占总人数比": 33.6, "总分": 84}, {"大区": "Ground项目部", "供应商": "J&S Out Front", "日均使用人数": 6, "时薪": 0.0, "markup": 0, "结算价": 0.0, "等级": "A", "占总人数比": 8.4, "总分": 82}, {"大区": "WE 美西大区", "供应商": "Reliant", "日均使用人数": 43, "时薪": 17.0, "markup": 8, "结算价": 19.9, "等级": "C", "占总人数比": 7.5, "总分": 80}, {"大区": "NE 东北大区", "供应商": "CRD", "日均使用人数": 57, "时薪": 16.0, "markup": 16, "结算价": 18.5, "等级": "B", "占总人数比": 6.0, "总分": 78}, {"大区": "MS 中南大区", "供应商": "SELECT HR", "日均使用人数": 14, "时薪": 15.0, "markup": 20, "结算价": 18.0, "等级": "B", "占总人数比": 3.2, "总分": 78}, {"大区": "GL 大湖大区", "供应商": "Grace hymn", "日均使用人数": 2, "时薪": 14.0, "markup": 14, "结算价": 16.0, "等级": "B", "占总人数比": 0.3, "总分": 76}, {"大区": "TX 德州大区", "供应商": "Loyalty", "日均使用人数": 20, "时薪": 14.0, "markup": 14, "结算价": 16.0, "等级": "B", "占总人数比": 11.1, "总分": 74}, {"大区": "WE 美西大区", "供应商": "Flash Way", "日均使用人数": 2, "时薪": 17.8, "markup": 10, "结算价": 19.6, "等级": "B", "占总人数比": 0.3, "总分": 74}, {"大区": "NE 东北大区", "供应商": "Z&Z", "日均使用人数": 247, "时薪": 15.9, "markup": 16, "结算价": 18.5, "等级": "B", "占总人数比": 26.1, "总分": 73}, {"大区": "NE 东北大区", "供应商": "LONG RIVER", "日均使用人数": 206, "时薪": 16.0, "markup": 19, "结算价": 19.0, "等级": "B", "占总人数比": 21.8, "总分": 72}, {"大区": "FL 佛州大区", "供应商": "RAPID", "日均使用人数": 92, "时薪": 15.0, "markup": 17, "结算价": 17.5, "等级": "B", "占总人数比": 22.2, "总分": 71}, {"大区": "FL 佛州大区", "供应商": "MYNN", "日均使用人数": 20, "时薪": 14.0, "markup": 25, "结算价": 17.5, "等级": "B", "占总人数比": 4.8, "总分": 71}, {"大区": "WE 美西大区", "供应商": "AAS", "日均使用人数": 11, "时薪": 17.0, "markup": 12, "结算价": 19.0, "等级": "B", "占总人数比": 1.9, "总分": 70}, {"大区": "MS 中南大区", "供应商": "Luxor", "日均使用人数": 54, "时薪": 15.5, "markup": 22, "结算价": 18.9, "等级": "C", "占总人数比": 12.9, "总分": 69}, {"大区": "MS 中南大区", "供应商": "Imperial", "日均使用人数": 165, "时薪": 15.5, "markup": 22, "结算价": 18.9, "等级": "B", "占总人数比": 39.3, "总分": 68}, {"大区": "TX 德州大区", "供应商": "B&A", "日均使用人数": 56, "时薪": 14.0, "markup": 14, "结算价": 16.0, "等级": "B", "占总人数比": 31.1, "总分": 66}, {"大区": "NE 东北大区", "供应商": "APEX", "日均使用人数": 15, "时薪": 17.0, "markup": 35, "结算价": 23.0, "等级": "B", "占总人数比": 1.6, "总分": 65}, {"大区": "FL 佛州大区", "供应商": "MB Delivery", "日均使用人数": 46, "时薪": 15.0, "markup": 23, "结算价": 18.5, "等级": "B", "占总人数比": 11.1, "总分": 64}, {"大区": "TX 德州大区", "供应商": "Makers", "日均使用人数": 3, "时薪": 14.0, "markup": 14, "结算价": 16.0, "等级": "B", "占总人数比": 1.7, "总分": 63}, {"大区": "GL 大湖大区", "供应商": "MI2016", "日均使用人数": 321, "时薪": 16.0, "markup": 12, "结算价": 18.0, "等级": "B", "占总人数比": 47.8, "总分": 61}, {"大区": "WE 美西大区", "供应商": "J&S Out Front", "日均使用人数": 45, "时薪": 16.5, "markup": 15, "结算价": 19.0, "等级": "B", "占总人数比": 7.8, "总分": 61}, {"大区": "TX 德州大区", "供应商": "Grace hymn", "日均使用人数": 32, "时薪": 15.0, "markup": 13, "结算价": 17.0, "等级": "B", "占总人数比": 18.1, "总分": 61}, {"大区": "NE 东北大区", "供应商": "PRIMAL", "日均使用人数": 54, "时薪": 17.0, "markup": 35, "结算价": 23.0, "等级": "C", "占总人数比": 5.8, "总分": 59}, {"大区": "GL 大湖大区", "供应商": "Imperial", "日均使用人数": 24, "时薪": 16.0, "markup": 17, "结算价": 18.4, "等级": "C", "占总人数比": 3.6, "总分": 59}, {"大区": "MS 中南大区", "供应商": "RAPID", "日均使用人数": 17, "时薪": 15.0, "markup": 20, "结算价": 18.0, "等级": "C", "占总人数比": 4.1, "总分": 58}, {"大区": "Ground项目部", "供应商": "Storx", "日均使用人数": 3, "时薪": 19.0, "markup": 20, "结算价": 22.8, "等级": "C", "占总人数比": 4.6, "总分": 58}, {"大区": "TX 德州大区", "供应商": "Fasthorse", "日均使用人数": 44, "时薪": 13.0, "markup": 15, "结算价": 15.0, "等级": "C", "占总人数比": 24.5, "总分": 58}, {"大区": "NE 东北大区", "供应商": "Direct Jobs", "日均使用人数": 26, "时薪": 15.9, "markup": 20, "结算价": 19.1, "等级": "C", "占总人数比": 2.7, "总分": 57}, {"大区": "GL 大湖大区", "供应商": "Lucky WJ", "日均使用人数": 52, "时薪": 17.0, "markup": 15, "结算价": 19.5, "等级": "C", "占总人数比": 7.7, "总分": 54}, {"大区": "WE 美西大区", "供应商": "Direct Jobs", "日均使用人数": 41, "时薪": 17.0, "markup": 17, "结算价": 19.9, "等级": "C", "占总人数比": 7.1, "总分": 54}, {"大区": "NE 东北大区", "供应商": "Imperial", "日均使用人数": 35, "时薪": 16.0, "markup": 20, "结算价": 19.2, "等级": "C", "占总人数比": 3.7, "总分": 54}, {"大区": "WE 美西大区", "供应商": "TG", "日均使用人数": 90, "时薪": 18.1, "markup": 5, "结算价": 19.0, "等级": "C", "占总人数比": 15.7, "总分": 52}, {"大区": "WE 美西大区", "供应商": "JC-SL(Greatfast)", "日均使用人数": 168, "时薪": 17.9, "markup": 6, "结算价": 19.0, "等级": "C", "占总人数比": 29.3, "总分": 51}, {"大区": "MS 中南大区", "供应商": "JC-SL(Greatfast)", "日均使用人数": 54, "时薪": 15.0, "markup": 20, "结算价": 18.0, "等级": "D", "占总人数比": 12.9, "总分": 51}, {"大区": "MS 中南大区", "供应商": "Direct Jobs", "日均使用人数": 35, "时薪": 16.0, "markup": 20, "结算价": 19.2, "等级": "C", "占总人数比": 8.4, "总分": 51}, {"大区": "Ground项目部", "供应商": "Direct Jobs", "日均使用人数": 3, "时薪": 17.0, "markup": 17, "结算价": 19.9, "等级": "C", "占总人数比": 4.4, "总分": 50}, {"大区": "Ground项目部", "供应商": "ERC", "日均使用人数": 1, "时薪": 18.0, "markup": 20, "结算价": 21.6, "等级": "C", "占总人数比": 1.5, "总分": 49}, {"大区": "Ground项目部", "供应商": "XPS", "日均使用人数": 28, "时薪": 17.5, "markup": 28, "结算价": 22.4, "等级": "C", "占总人数比": 42.9, "总分": 48}, {"大区": "Ground项目部", "供应商": "Imperial", "日均使用人数": 2, "时薪": 16.0, "markup": 22, "结算价": 19.5, "等级": "C", "占总人数比": 3.1, "总分": 47}, {"大区": "MS 中南大区", "供应商": "Employer Solutions Services", "日均使用人数": 61, "时薪": 15.5, "markup": 23, "结算价": 19.1, "等级": "C", "占总人数比": 14.6, "总分": 45}, {"大区": "TX 德州大区", "供应商": "Fast Staff", "日均使用人数": 24, "时薪": 13.0, "markup": 23, "结算价": 16.0, "等级": "D", "占总人数比": 13.5, "总分": 38}, {"大区": "GL 大湖大区", "供应商": "Ultimile", "日均使用人数": 164, "时薪": 17.0, "markup": 12, "结算价": 19.0, "等级": "D", "占总人数比": 24.4, "总分": 38}, {"大区": "MS 中南大区", "供应商": "EMEC", "日均使用人数": 13, "时薪": 16.0, "markup": 23, "结算价": 19.7, "等级": "D", "占总人数比": 3.1, "总分": 34}, {"大区": "GL 大湖大区", "供应商": "SDP", "日均使用人数": 109, "时薪": 16.0, "markup": 12, "结算价": 18.0, "等级": "D", "占总人数比": 16.2, "总分": 30}, {"大区": "FL 佛州大区", "供应商": "Spartan", "日均使用人数": 3, "时薪": 11.0, "markup": 46, "结算价": 16.1, "等级": "D", "占总人数比": 0.7, "总分": 29}, {"大区": "FL 佛州大区", "供应商": "Dagmaries", "日均使用人数": 6, "时薪": 12.0, "markup": 25, "结算价": 15.0, "等级": "D", "占总人数比": 1.4, "总分": 23}, {"大区": "MS 中南大区", "供应商": "XPS", "日均使用人数": 6, "时薪": 15.0, "markup": 20, "结算价": 18.0, "等级": "D", "占总人数比": 1.5, "总分": 16}, {"大区": "FL 佛州大区", "供应商": "POPULARILY", "日均使用人数": 160, "时薪": 14.0, "markup": 25, "结算价": 17.5, "等级": "D", "占总人数比": 38.6, "总分": 11}, {"大区": "FL 佛州大区", "供应商": "Joy On Us", "日均使用人数": 47, "时薪": 14.0, "markup": 31, "结算价": 18.4, "等级": "D", "占总人数比": 11.4, "总分": 3}], "total_daily_people": 3270, "regions": ["FL 佛州大区", "GL 大湖大区", "MS 中南大区", "NE 东北大区", "TX 德州大区", "WE 美西大区", "Ground项目部"], "ladder_data": [{"label": "≥200人/天", "count": 6, "pos_count": 2, "neg_count": 4, "avg_discount": 2.0, "annual_saving": 574857, "current_cost": 8951007}, {"label": "100-199人/天", "count": 5, "pos_count": 3, "neg_count": 2, "avg_discount": 0.7, "annual_saving": 173652, "current_cost": 3200036}, {"label": "50-99人/天", "count": 10, "pos_count": 6, "neg_count": 4, "avg_discount": 0.3, "annual_saving": 91583, "current_cost": 3561484}, {"label": "20-49人/天", "count": 11, "pos_count": 7, "neg_count": 4, "avg_discount": 0.0, "annual_saving": 0, "current_cost": 2683268}, {"label": "<20人/天", "count": 9, "pos_count": 7, "neg_count": 2, "avg_discount": 0.0, "annual_saving": 0, "current_cost": 1448943}], "ladder_matrix": [{"用量阶梯": "A: ≥200人/天", "≥20%": "降8%", "10%-20%": "降6%", "5%-10%": "降4%", "0%-5%": "降2%", "<0%（需核查）": "维持"}, {"用量阶梯": "B: 100-199人/天", "≥20%": "降6%", "10%-20%": "降4%", "5%-10%": "降2%", "0%-5%": "维持", "<0%（需核查）": "维持"}, {"用量阶梯": "C: 50-99人/天", "≥20%": "降4%", "10%-20%": "降2%", "5%-10%": "维持", "0%-5%": "维持", "<0%（需核查）": "维持"}, {"用量阶梯": "D: 20-49人/天", "≥20%": "降2%", "10%-20%": "维持", "5%-10%": "维持", "0%-5%": "维持", "<0%（需核查）": "维持"}, {"用量阶梯": "E: <20人/天", "≥20%": "维持", "10%-20%": "维持", "5%-10%": "维持", "0%-5%": "维持", "<0%（需核查）": "维持"}], "supplier_negotiation": [{"供应商": "MI2016", "大区": "GL 大湖大区", "仓库": "ORD.H", "日均人数": 321, "结算价": 18.0, "时薪": 16.0, "雇主成本/h": 2.56, "利润/h": -0.56, "利润率": -3.1, "markup": 0, "用量阶梯": "≥200人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 1548567, "谈价策略": "测算利润-3%(异常)，供应商不可能亏损，需核查时薪$16.00或markup，利润可能从劳务工时薪中扣除", "等级": "B"}, {"供应商": "Qianyi", "大区": "NE 东北大区", "仓库": "EWR.H", "日均人数": 306, "结算价": 18.5, "时薪": 15.95, "雇主成本/h": 2.7115, "利润/h": -0.1614999999999993, "利润率": -0.9, "markup": 0, "用量阶梯": "≥200人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 1989795, "谈价策略": "测算利润-1%(异常)，供应商不可能亏损，需核查时薪$15.95或markup，利润可能从劳务工时薪中扣除", "等级": "A"}, {"供应商": "Z&Z", "大区": "NE 东北大区", "仓库": "EWR.H", "日均人数": 246, "结算价": 18.5, "时薪": 15.95, "雇主成本/h": 2.7115, "利润/h": -0.1614999999999993, "利润率": -0.9, "markup": 0, "用量阶梯": "≥200人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 1396166, "谈价策略": "测算利润-1%(异常)，供应商不可能亏损，需核查时薪$15.95或markup，利润可能从劳务工时薪中扣除", "等级": "B"}, {"供应商": "LONG RIVER", "大区": "NE 东北大区", "仓库": "EWR.H", "日均人数": 205, "结算价": 19.0, "时薪": 16.0, "雇主成本/h": 2.72, "利润/h": 0.2799999999999998, "利润率": 1.5, "markup": 0, "用量阶梯": "≥200人/天", "建议降价%": 2, "预计年节省": 282538, "当月成本": 1177242, "谈价策略": "用工≥200人/天→降2%（结算$19.00=时薪$16.00+雇主成本$2.72+利润$0.28）", "等级": "B"}, {"供应商": "Ultimile", "大区": "GL 大湖大区", "仓库": "ORD.H", "日均人数": 164, "结算价": 19.0, "时薪": 17.0, "雇主成本/h": 2.72, "利润/h": -0.7200000000000002, "利润率": -3.8, "markup": 0, "用量阶梯": "100-199人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 806208, "谈价策略": "测算利润-4%(异常)，供应商不可能亏损，需核查时薪$17.00或markup，利润可能从劳务工时薪中扣除", "等级": "D"}, {"供应商": "POPULARILY", "大区": "FL 佛州大区", "仓库": "MIA.H", "日均人数": 160, "结算价": 17.5, "时薪": 14.0, "雇主成本/h": 2.1, "利润/h": 1.4, "利润率": 8.0, "markup": 0, "用量阶梯": "100-199人/天", "建议降价%": 2, "预计年节省": 173652, "当月成本": 723551, "谈价策略": "用工100-199人/天→降2%（结算$17.50=时薪$14.00+雇主成本$2.10+利润$1.40）", "等级": "D"}, {"供应商": "SDP", "大区": "GL 大湖大区", "仓库": "ORD.H", "日均人数": 109, "结算价": 18.0, "时薪": 16.0, "雇主成本/h": 2.56, "利润/h": -0.56, "利润率": -3.1, "markup": 0, "用量阶梯": "100-199人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 549994, "谈价策略": "测算利润-3%(异常)，供应商不可能亏损，需核查时薪$16.00或markup，利润可能从劳务工时薪中扣除", "等级": "D"}, {"供应商": "Imperial", "大区": "MS 中南大区", "仓库": "ATL.H", "日均人数": 106, "结算价": 19.52, "时薪": 16.0, "雇主成本/h": 2.4, "利润/h": 1.1199999999999997, "利润率": 5.7, "markup": 0, "用量阶梯": "100-199人/天", "建议降价%": 2, "预计年节省": 150346, "当月成本": 626441, "谈价策略": "用工100-199人/天→降2%（结算$19.52=时薪$16.00+雇主成本$2.40+利润$1.12）", "等级": "B"}, {"供应商": "JC-SL(Greatfast)", "大区": "WE 美西大区", "仓库": "LAV.H", "日均人数": 95, "结算价": 19.0, "时薪": 17.92, "雇主成本/h": 3.2256, "利润/h": -2.1456000000000017, "利润率": -11.3, "markup": 6, "用量阶梯": "50-99人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 625928, "谈价策略": "测算利润-11%(异常)，供应商不可能亏损，需核查时薪$17.92或markup，利润可能从劳务工时薪中扣除", "等级": "C"}, {"供应商": "RAPID", "大区": "FL 佛州大区", "仓库": "MIA.H", "日均人数": 92, "结算价": 17.5, "时薪": 15.0, "雇主成本/h": 2.25, "利润/h": 0.25, "利润率": 1.4, "markup": 0, "用量阶梯": "50-99人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 466861, "谈价策略": "测算利润率仅1%，利润空间不足，维持现价", "等级": "B"}, {"供应商": "TG", "大区": "WE 美西大区", "仓库": "LAV.H", "日均人数": 89, "结算价": 19.0, "时薪": 18.05, "雇主成本/h": 3.249, "利润/h": -2.299000000000001, "利润率": -12.1, "markup": 5, "用量阶梯": "50-99人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 637060, "谈价策略": "测算利润-12%(异常)，供应商不可能亏损，需核查时薪$18.05或markup，利润可能从劳务工时薪中扣除", "等级": "C"}, {"供应商": "JC-SL(Greatfast)", "大区": "WE 美西大区", "仓库": "CNO.H", "日均人数": 72, "结算价": 19.0, "时薪": 17.92, "雇主成本/h": 3.2256, "利润/h": -2.1456000000000017, "利润率": -11.3, "markup": 6, "用量阶梯": "50-99人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 600361, "谈价策略": "测算利润-11%(异常)，供应商不可能亏损，需核查时薪$17.92或markup，利润可能从劳务工时薪中扣除", "等级": "C"}, {"供应商": "Employer Solutions Services", "大区": "MS 中南大区", "仓库": "ATL.H", "日均人数": 59, "结算价": 19.68, "时薪": 16.0, "雇主成本/h": 2.4, "利润/h": 1.2799999999999998, "利润率": 6.5, "markup": 0, "用量阶梯": "50-99人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 336813, "谈价策略": "测算利润率仅6%，利润空间不足，维持现价", "等级": "C"}, {"供应商": "Imperial", "大区": "MS 中南大区", "仓库": "CLT.H", "日均人数": 58, "结算价": 18.3, "时薪": 15.0, "雇主成本/h": 2.25, "利润/h": 1.0500000000000007, "利润率": 5.7, "markup": 0, "用量阶梯": "50-99人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 302503, "谈价策略": "测算利润率仅6%，利润空间不足，维持现价", "等级": "B"}, {"供应商": "CRD", "大区": "NE 东北大区", "仓库": "EWR.H", "日均人数": 56, "结算价": 18.5, "时薪": 16.0, "雇主成本/h": 2.72, "利润/h": -0.2200000000000002, "利润率": -1.2, "markup": 0, "用量阶梯": "50-99人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 314723, "谈价策略": "测算利润-1%(异常)，供应商不可能亏损，需核查时薪$16.00或markup，利润可能从劳务工时薪中扣除", "等级": "B"}, {"供应商": "B&A", "大区": "TX 德州大区", "仓库": "DFW.H", "日均人数": 55, "结算价": 16.0, "时薪": 14.0, "雇主成本/h": 1.9600000000000002, "利润/h": 0.039999999999999813, "利润率": 0.2, "markup": 0, "用量阶梯": "50-99人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 353900, "谈价策略": "测算利润率仅0%，利润空间不足，维持现价", "等级": "B"}, {"供应商": "PRIMAL", "大区": "NE 东北大区", "仓库": "JFK.H", "日均人数": 54, "结算价": 23.0, "时薪": 17.0, "雇主成本/h": 2.89, "利润/h": 3.11, "利润率": 13.5, "markup": 0, "用量阶梯": "50-99人/天", "建议降价%": 2, "预计年节省": 91583, "当月成本": 381597, "谈价策略": "用工50-99人/天→降2%（结算$23.00=时薪$17.00+雇主成本$2.89+利润$3.11）", "等级": "C"}, {"供应商": "Lucky WJ", "大区": "GL 大湖大区", "仓库": "ORD.H", "日均人数": 52, "结算价": 19.5, "时薪": 17.0, "雇主成本/h": 2.72, "利润/h": -0.2200000000000002, "利润率": -1.1, "markup": 0, "用量阶梯": "50-99人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 291877, "谈价策略": "测算利润-1%(异常)，供应商不可能亏损，需核查时薪$17.00或markup，利润可能从劳务工时薪中扣除", "等级": "C"}, {"供应商": "JC-SL(Greatfast)", "大区": "MS 中南大区", "仓库": "ATL.H", "日均人数": 49, "结算价": 18.0, "时薪": 15.0, "雇主成本/h": 2.25, "利润/h": 0.75, "利润率": 4.2, "markup": 0, "用量阶梯": "20-49人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 250237, "谈价策略": "测算利润率仅4%，利润空间不足，维持现价", "等级": "D"}, {"供应商": "Joy On Us", "大区": "FL 佛州大区", "仓库": "MCO.H", "日均人数": 47, "结算价": 18.4, "时薪": 14.0, "雇主成本/h": 2.1, "利润/h": 2.2999999999999985, "利润率": 12.5, "markup": 0, "用量阶梯": "20-49人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 230364, "谈价策略": "测算利润率仅12%，利润空间不足，维持现价", "等级": "D"}, {"供应商": "MB Delivery", "大区": "FL 佛州大区", "仓库": "MCO.H", "日均人数": 46, "结算价": 18.5, "时薪": 15.0, "雇主成本/h": 2.25, "利润/h": 1.25, "利润率": 6.8, "markup": 0, "用量阶梯": "20-49人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 212433, "谈价策略": "测算利润率仅7%，利润空间不足，维持现价", "等级": "B"}, {"供应商": "April Flower", "大区": "WE 美西大区", "仓库": "DEN.H", "日均人数": 46, "结算价": 19.2, "时薪": 16.0, "雇主成本/h": 2.56, "利润/h": 0.6399999999999992, "利润率": 3.3, "markup": 0, "用量阶梯": "20-49人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 243873, "谈价策略": "测算利润率仅3%，利润空间不足，维持现价", "等级": "A"}, {"供应商": "April Flower", "大区": "WE 美西大区", "仓库": "DEN.H", "日均人数": 46, "结算价": 19.2, "时薪": 16.0, "雇主成本/h": 2.56, "利润/h": 0.6399999999999992, "利润率": 3.3, "markup": 20, "用量阶梯": "20-49人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 243873, "谈价策略": "测算利润率仅3%，利润空间不足，维持现价", "等级": "A"}, {"供应商": "Luxor", "大区": "MS 中南大区", "仓库": "CLT.H", "日均人数": 45, "结算价": 18.3, "时薪": 15.0, "雇主成本/h": 2.25, "利润/h": 1.0500000000000007, "利润率": 5.7, "markup": 0, "用量阶梯": "20-49人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 214160, "谈价策略": "测算利润率仅6%，利润空间不足，维持现价", "等级": "B"}, {"供应商": "J&S Out Front", "大区": "WE 美西大区", "仓库": "CNO.H", "日均人数": 44, "结算价": 19.0, "时薪": 16.52, "雇主成本/h": 2.9736, "利润/h": -0.4935999999999994, "利润率": -2.6, "markup": 15, "用量阶梯": "20-49人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 281303, "谈价策略": "测算利润-3%(异常)，供应商不可能亏损，需核查时薪$16.52或markup，利润可能从劳务工时薪中扣除", "等级": "B"}, {"供应商": "Fasthorse", "大区": "TX 德州大区", "仓库": "DFW.H", "日均人数": 43, "结算价": 15.0, "时薪": 13.0, "雇主成本/h": 1.8200000000000003, "利润/h": 0.17999999999999972, "利润率": 1.2, "markup": 0, "用量阶梯": "20-49人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 292215, "谈价策略": "测算利润率仅1%，利润空间不足，维持现价", "等级": "C"}, {"供应商": "SELECT HR", "大区": "FL 佛州大区", "仓库": "MCO.H", "日均人数": 40, "结算价": 16.52, "时薪": 14.0, "雇主成本/h": 2.1, "利润/h": 0.4199999999999995, "利润率": 2.5, "markup": 0, "用量阶梯": "20-49人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 159756, "谈价策略": "测算利润率仅2%，利润空间不足，维持现价", "等级": "A"}, {"供应商": "Direct Jobs", "大区": "WE 美西大区", "仓库": "CNO.H", "日均人数": 40, "结算价": 19.89, "时薪": 17.0, "雇主成本/h": 3.06, "利润/h": -0.16999999999999948, "利润率": -0.9, "markup": 17, "用量阶梯": "20-49人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 255812, "谈价策略": "测算利润-1%(异常)，供应商不可能亏损，需核查时薪$17.00或markup，利润可能从劳务工时薪中扣除", "等级": "C"}, {"供应商": "Reliant", "大区": "WE 美西大区", "仓库": "LAV.H", "日均人数": 38, "结算价": 19.89, "时薪": 17.0, "雇主成本/h": 3.06, "利润/h": -0.16999999999999948, "利润率": -0.9, "markup": 17, "用量阶梯": "20-49人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 286151, "谈价策略": "测算利润-1%(异常)，供应商不可能亏损，需核查时薪$17.00或markup，利润可能从劳务工时薪中扣除", "等级": "B"}, {"供应商": "Direct Jobs", "大区": "MS 中南大区", "仓库": "ATL.H", "日均人数": 35, "结算价": 19.2, "时薪": 16.0, "雇主成本/h": 2.4, "利润/h": 0.7999999999999994, "利润率": 4.2, "markup": 0, "用量阶梯": "20-49人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 201201, "谈价策略": "测算利润率仅4%，利润空间不足，维持现价", "等级": "C"}, {"供应商": "Imperial", "大区": "NE 东北大区", "仓库": "EWR.H", "日均人数": 34, "结算价": 19.2, "时薪": 16.0, "雇主成本/h": 2.72, "利润/h": 0.4799999999999991, "利润率": 2.5, "markup": 0, "用量阶梯": "20-49人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 57753, "谈价策略": "测算利润率仅2%，利润空间不足，维持现价", "等级": "C"}, {"供应商": "Grace hymn", "大区": "TX 德州大区", "仓库": "IAH.H", "日均人数": 32, "结算价": 17.0, "时薪": 15.0, "雇主成本/h": 2.1, "利润/h": -0.10000000000000009, "利润率": -0.6, "markup": 13, "用量阶梯": "20-49人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 624348, "谈价策略": "测算利润-1%(异常)，供应商不可能亏损，需核查时薪$15.00或markup，利润可能从劳务工时薪中扣除", "等级": "B"}, {"供应商": "Imperial", "大区": "WE 美西大区", "仓库": "SEA.H", "日均人数": 26, "结算价": 20.3, "时薪": 17.5, "雇主成本/h": 2.975, "利润/h": -0.17499999999999938, "利润率": -0.9, "markup": 16, "用量阶梯": "20-49人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 118493, "谈价策略": "测算利润-1%(异常)，供应商不可能亏损，需核查时薪$17.50或markup，利润可能从劳务工时薪中扣除", "等级": "A"}, {"供应商": "Direct Jobs", "大区": "NE 东北大区", "仓库": "EWR.H", "日均人数": 25, "结算价": 19.1, "时薪": 15.92, "雇主成本/h": 2.7064000000000004, "利润/h": 0.47360000000000113, "利润率": 2.5, "markup": 0, "用量阶梯": "20-49人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 119701, "谈价策略": "测算利润率仅2%，利润空间不足，维持现价", "等级": "C"}, {"供应商": "Imperial", "大区": "GL 大湖大区", "仓库": "ORD.H", "日均人数": 24, "结算价": 18.4, "时薪": 16.0, "雇主成本/h": 2.56, "利润/h": -0.16000000000000147, "利润率": -0.9, "markup": 0, "用量阶梯": "20-49人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 106497, "谈价策略": "测算利润-1%(异常)，供应商不可能亏损，需核查时薪$16.00或markup，利润可能从劳务工时薪中扣除", "等级": "C"}, {"供应商": "Fast Staff", "大区": "TX 德州大区", "仓库": "IAH.H", "日均人数": 24, "结算价": 16.0, "时薪": 13.0, "雇主成本/h": 1.8200000000000003, "利润/h": 1.1799999999999997, "利润率": 7.4, "markup": 23, "用量阶梯": "20-49人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 16249, "谈价策略": "测算利润率仅7%，利润空间不足，维持现价", "等级": "D"}, {"供应商": "XPS", "大区": "Ground项目部", "仓库": "CNO.G", "日均人数": 23, "结算价": 21.63, "时薪": 16.9, "雇主成本/h": 3.042, "利润/h": 1.6880000000000006, "利润率": 7.8, "markup": 28, "用量阶梯": "20-49人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 139741, "谈价策略": "测算利润率仅8%，利润空间不足，维持现价", "等级": "C"}, {"供应商": "Z&Z", "大区": "Ground项目部", "仓库": "EWR.G", "日均人数": 22, "结算价": 20.0, "时薪": 16.0, "雇主成本/h": 2.72, "利润/h": 1.2799999999999998, "利润率": 6.4, "markup": 25, "用量阶梯": "20-49人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 126390, "谈价策略": "测算利润率仅6%，利润空间不足，维持现价", "等级": "A"}, {"供应商": "A-Share", "大区": "WE 美西大区", "仓库": "CNO.H", "日均人数": 21, "结算价": 19.0, "时薪": 17.92, "雇主成本/h": 3.2256, "利润/h": -2.1456000000000017, "利润率": -11.3, "markup": 6, "用量阶梯": "20-49人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 379436, "谈价策略": "测算利润-11%(异常)，供应商不可能亏损，需核查时薪$17.92或markup，利润可能从劳务工时薪中扣除", "等级": "A"}, {"供应商": "MYNN", "大区": "FL 佛州大区", "仓库": "MIA.H", "日均人数": 20, "结算价": 17.5, "时薪": 14.0, "雇主成本/h": 2.1, "利润/h": 1.4, "利润率": 8.0, "markup": 0, "用量阶梯": "20-49人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 23239, "谈价策略": "测算利润率仅8%，利润空间不足，维持现价", "等级": "B"}, {"供应商": "Loyalty", "大区": "TX 德州大区", "仓库": "DFW.H", "日均人数": 19, "结算价": 16.0, "时薪": 14.0, "雇主成本/h": 1.9600000000000002, "利润/h": 0.039999999999999813, "利润率": 0.2, "markup": 14, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 91308, "谈价策略": "测算利润率仅0%，利润空间不足，维持现价", "等级": "B"}, {"供应商": "Select Hire", "大区": "WE 美西大区", "仓库": "SEA.H", "日均人数": 19, "结算价": 20.48, "时薪": 17.5, "雇主成本/h": 2.975, "利润/h": 0.0050000000000003375, "利润率": 0.0, "markup": 17, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 84633, "谈价策略": "测算利润率仅0%，利润空间不足，维持现价", "等级": "A"}, {"供应商": "RAPID", "大区": "MS 中南大区", "仓库": "ATL.H", "日均人数": 17, "结算价": 18.0, "时薪": 15.0, "雇主成本/h": 2.25, "利润/h": 0.75, "利润率": 4.2, "markup": 0, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 67825, "谈价策略": "测算利润率仅4%，利润空间不足，维持现价", "等级": "C"}, {"供应商": "APEX", "大区": "NE 东北大区", "仓库": "JFK.H", "日均人数": 15, "结算价": 23.0, "时薪": 17.0, "雇主成本/h": 2.89, "利润/h": 3.11, "利润率": 13.5, "markup": 0, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 103355, "谈价策略": "测算利润率仅14%，利润空间不足，维持现价", "等级": "B"}, {"供应商": "SELECT HR", "大区": "MS 中南大区", "仓库": "CLT.H", "日均人数": 13, "结算价": 18.0, "时薪": 15.0, "雇主成本/h": 2.25, "利润/h": 0.75, "利润率": 4.2, "markup": 0, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 28414, "谈价策略": "测算利润率仅4%，利润空间不足，维持现价", "等级": "B"}, {"供应商": "EMEC", "大区": "MS 中南大区", "仓库": "ATL.H", "日均人数": 12, "结算价": 19.68, "时薪": 16.0, "雇主成本/h": 2.4, "利润/h": 1.2799999999999998, "利润率": 6.5, "markup": 0, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 78501, "谈价策略": "测算利润率仅6%，利润空间不足，维持现价", "等级": "D"}, {"供应商": "Select Hire", "大区": "WE 美西大区", "仓库": "LAV.H", "日均人数": 11, "结算价": 19.55, "时薪": 17.0, "雇主成本/h": 3.06, "利润/h": -0.5099999999999993, "利润率": -2.6, "markup": 15, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 37449, "谈价策略": "测算利润-3%(异常)，供应商不可能亏损，需核查时薪$17.00或markup，利润可能从劳务工时薪中扣除", "等级": "D"}, {"供应商": "AAS", "大区": "WE 美西大区", "仓库": "CNO.H", "日均人数": 10, "结算价": 19.0, "时薪": 17.0, "雇主成本/h": 3.06, "利润/h": -1.06, "利润率": -5.6, "markup": 12, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 551453, "谈价策略": "测算利润-6%(异常)，供应商不可能亏损，需核查时薪$17.00或markup，利润可能从劳务工时薪中扣除", "等级": "B"}, {"供应商": "Luxor", "大区": "MS 中南大区", "仓库": "ATL.H", "日均人数": 8, "结算价": 19.52, "时薪": 16.0, "雇主成本/h": 2.4, "利润/h": 1.1199999999999997, "利润率": 5.7, "markup": 0, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 49937, "谈价策略": "测算利润率仅6%，利润空间不足，维持现价", "等级": "C"}, {"供应商": "Dagmaries", "大区": "FL 佛州大区", "仓库": "SJU", "日均人数": 6, "结算价": 15.0, "时薪": 12.0, "雇主成本/h": 1.7999999999999998, "利润/h": 1.2000000000000002, "利润率": 8.0, "markup": 0, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 15840, "谈价策略": "测算利润率仅8%，利润空间不足，维持现价", "等级": "D"}, {"供应商": "XPS", "大区": "MS 中南大区", "仓库": "ATL.H", "日均人数": 6, "结算价": 18.0, "时薪": 15.0, "雇主成本/h": 2.25, "利润/h": 0.75, "利润率": 4.2, "markup": 0, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 29100, "谈价策略": "测算利润率仅4%，利润空间不足，维持现价", "等级": "D"}, {"供应商": "Select Hire", "大区": "WE 美西大区", "仓库": "CNO.H", "日均人数": 5, "结算价": 0.0, "时薪": 0.0, "雇主成本/h": 0.0, "利润/h": 0.0, "利润率": 0.0, "markup": 0, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 23462, "谈价策略": "测算利润率仅nan%，利润空间不足，维持现价", "等级": "A"}, {"供应商": "J&S Out Front", "大区": "Ground项目部", "仓库": "CNO.G", "日均人数": 5, "结算价": 0.0, "时薪": 0.0, "雇主成本/h": 0.0, "利润/h": 0.0, "利润率": 0.0, "markup": 0, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 20748, "谈价策略": "测算利润率仅nan%，利润空间不足，维持现价", "等级": "A"}, {"供应商": "JC-SL(Greatfast)", "大区": "MS 中南大区", "仓库": "CLT.H", "日均人数": 4, "结算价": 18.0, "时薪": 15.0, "雇主成本/h": 2.25, "利润/h": 0.75, "利润率": 4.2, "markup": 0, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 18326, "谈价策略": "测算利润率仅4%，利润空间不足，维持现价", "等级": "C"}, {"供应商": "Reliant", "大区": "WE 美西大区", "仓库": "CNO.H", "日均人数": 4, "结算价": 0.0, "时薪": 0.0, "雇主成本/h": 0.0, "利润/h": 0.0, "利润率": 0.0, "markup": 0, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 11628, "谈价策略": "测算利润率仅nan%，利润空间不足，维持现价", "等级": "C"}, {"供应商": "Spartan", "大区": "FL 佛州大区", "仓库": "SJU", "日均人数": 3, "结算价": 16.06, "时薪": 11.0, "雇主成本/h": 1.65, "利润/h": 3.409999999999999, "利润率": 21.2, "markup": 0, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 8480, "谈价策略": "测算利润率仅21%，利润空间不足，维持现价", "等级": "D"}, {"供应商": "Makers", "大区": "TX 德州大区", "仓库": "DFW.H", "日均人数": 3, "结算价": 16.0, "时薪": 14.0, "雇主成本/h": 1.9600000000000002, "利润/h": 0.039999999999999813, "利润率": 0.2, "markup": 14, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 664095, "谈价策略": "测算利润率仅0%，利润空间不足，维持现价", "等级": "B"}, {"供应商": "XPS", "大区": "Ground项目部", "仓库": "ORD.G", "日均人数": 3, "结算价": 21.76, "时薪": 17.0, "雇主成本/h": 2.72, "利润/h": 2.0400000000000014, "利润率": 9.4, "markup": 28, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 23088, "谈价策略": "测算利润率仅9%，利润空间不足，维持现价", "等级": "D"}, {"供应商": "Storx", "大区": "Ground项目部", "仓库": "SFO.G", "日均人数": 3, "结算价": 22.8, "时薪": 19.0, "雇主成本/h": 3.42, "利润/h": 0.3800000000000008, "利润率": 1.7, "markup": 20, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 16913, "谈价策略": "测算利润率仅2%，利润空间不足，维持现价", "等级": "C"}, {"供应商": "Grace hymn", "大区": "GL 大湖大区", "仓库": "CVG.H", "日均人数": 2, "结算价": 16.0, "时薪": 14.0, "雇主成本/h": 2.24, "利润/h": -0.2400000000000002, "利润率": -1.5, "markup": 0, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 168034, "谈价策略": "测算利润-2%(异常)，供应商不可能亏损，需核查时薪$14.00或markup，利润可能从劳务工时薪中扣除", "等级": "B"}, {"供应商": "Imperial", "大区": "Ground项目部", "仓库": "ATL.G", "日均人数": 2, "结算价": 19.52, "时薪": 16.0, "雇主成本/h": 2.4, "利润/h": 1.1199999999999997, "利润率": 5.7, "markup": 22, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 6308, "谈价策略": "测算利润率仅6%，利润空间不足，维持现价", "等级": "C"}, {"供应商": "Direct Jobs", "大区": "Ground项目部", "仓库": "CNO.G", "日均人数": 2, "结算价": 19.89, "时薪": 17.0, "雇主成本/h": 3.06, "利润/h": -0.16999999999999948, "利润率": -0.9, "markup": 17, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 8883, "谈价策略": "测算利润-1%(异常)，供应商不可能亏损，需核查时薪$17.00或markup，利润可能从劳务工时薪中扣除", "等级": "C"}, {"供应商": "XPS", "大区": "Ground项目部", "仓库": "SFO.G", "日均人数": 2, "结算价": 23.68, "时薪": 18.5, "雇主成本/h": 3.33, "利润/h": 1.8499999999999996, "利润率": 7.8, "markup": 28, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 10390, "谈价策略": "测算利润率仅8%，利润空间不足，维持现价", "等级": "C"}, {"供应商": "Employer Solutions Services", "大区": "MS 中南大区", "仓库": "CLT.H", "日均人数": 1, "结算价": 18.45, "时薪": 15.0, "雇主成本/h": 2.25, "利润/h": 1.1999999999999993, "利润率": 6.5, "markup": 0, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 3450, "谈价策略": "测算利润率仅6%，利润空间不足，维持现价", "等级": "D"}, {"供应商": "Flash Way", "大区": "WE 美西大区", "仓库": "CNO.H", "日均人数": 1, "结算价": 19.55, "时薪": 17.8, "雇主成本/h": 3.204, "利润/h": -1.4540000000000002, "利润率": -7.4, "markup": 10, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 3940, "谈价策略": "测算利润-7%(异常)，供应商不可能亏损，需核查时薪$17.80或markup，利润可能从劳务工时薪中扣除", "等级": "B"}, {"供应商": "AAS", "大区": "Ground项目部", "仓库": "CNO.G", "日均人数": 1, "结算价": 21.42, "时薪": 18.0, "雇主成本/h": 3.2399999999999998, "利润/h": 0.18000000000000194, "利润率": 0.8, "markup": 19, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 3782, "谈价策略": "测算利润率仅1%，利润空间不足，维持现价", "等级": "A"}, {"供应商": "ERC", "大区": "Ground项目部", "仓库": "CNO.G", "日均人数": 1, "结算价": 21.6, "时薪": 18.0, "雇主成本/h": 3.2399999999999998, "利润/h": 0.36000000000000165, "利润率": 1.7, "markup": 20, "用量阶梯": "<20人/天", "建议降价%": 0, "预计年节省": 0, "当月成本": 2584, "谈价策略": "测算利润率仅2%，利润空间不足，维持现价", "等级": "C"}], "noncompliant_cards": [{"供应商": "SDP", "大区": "GL 大湖大区", "仓库": "ORD.H", "问题": "No Workers' Compensation Coverage Exists for this Employer on the checker"}, {"供应商": "PRIMAL", "大区": "NE 东北大区", "仓库": "JFK.H", "问题": "No Workers' Compensation Coverage Exists for this Employer on the checker"}, {"供应商": "B&A", "大区": "TX 德州大区", "仓库": "DFW.H", "问题": "this insurance company does not offer workers comp"}, {"供应商": "Makers", "大区": "TX 德州大区", "仓库": "DFW.H", "问题": "insurance not showing up on the coverage checker"}, {"供应商": "TG", "大区": "WE 美西大区", "仓库": "LAV.H", "问题": "No Workers' Compensation Coverage Exists for this Employer on the checker"}, {"供应商": "XPS", "大区": "Ground项目部", "仓库": "CNO.G", "问题": "No Workers' Compensation Coverage Exists for this Employer on the checker"}, {"供应商": "Storx", "大区": "Ground项目部", "仓库": "SFO.G", "问题": "the insurance company website explicitly states PEOs are not eligible"}], "risk_stats": {"low_score_count": 21, "has_deduction": 27, "accident_count": 3, "accident_list": [{"大区": "GL 大湖大区", "仓库": "ORD.H", "供应商": "Lucky WJ", "事件": "ORD.H 05/21/2026叉车撞人调查报告"}, {"大区": "TX 德州大区", "仓库": "DFW.H", "供应商": "Fasthorse", "事件": "DFW.H 05/28/2026叉车掉落事故报告"}, {"大区": "WE 美西大区", "仓库": "CNO.H", "供应商": "JC-SL(Greatfast)", "事件": "【05/05/2026员工绊倒事故通报】无受伤事故 / CNO HUB分拣部 "}]}, "high_risk": [{"大区": "FL 佛州大区", "仓库": "MCO.H", "供应商": "Joy On Us", "总分": 3, "扣分总分": -80, "扣分汇总": "商业道德(-20分)、不按时发薪(-60分)"}, {"大区": "FL 佛州大区", "仓库": "MIA.H", "供应商": "POPULARILY", "总分": 11, "扣分总分": -60, "扣分汇总": "不按时发薪(-60分)"}, {"大区": "FL 佛州大区", "仓库": "SJU", "供应商": "Dagmaries", "总分": 23, "扣分总分": -20, "扣分汇总": "响应配合(-15分)、擅自离岗(-5分)"}, {"大区": "FL 佛州大区", "仓库": "SJU", "供应商": "Spartan", "总分": 29, "扣分总分": -5, "扣分汇总": "擅自离岗(-5分)"}, {"大区": "GL 大湖大区", "仓库": "ORD.H", "供应商": "SDP", "总分": 30, "扣分总分": -5, "扣分汇总": "Onsite Mgr(-5分)"}, {"大区": "GL 大湖大区", "仓库": "ORD.H", "供应商": "Ultimile", "总分": 38, "扣分总分": -15, "扣分汇总": "Onsite Mgr(-5分)、响应配合(-5分)、擅自离岗(-5分)"}, {"大区": "MS 中南大区", "仓库": "ATL.H", "供应商": "EMEC", "总分": 34, "扣分总分": -10, "扣分汇总": "响应配合(-10分)"}, {"大区": "MS 中南大区", "仓库": "ATL.H", "供应商": "Employer Solutions Services", "总分": 45, "扣分总分": -10, "扣分汇总": "Onsite Mgr(-10分)"}, {"大区": "MS 中南大区", "仓库": "ATL.H", "供应商": "JC-SL(Greatfast)", "总分": 18, "扣分总分": -40, "扣分汇总": "Onsite Mgr(-10分)、响应配合(-10分)、不按时发薪(-20分)"}, {"大区": "MS 中南大区", "仓库": "ATL.H", "供应商": "Luxor", "总分": 44, "扣分总分": 0, "扣分汇总": "无"}, {"大区": "MS 中南大区", "仓库": "ATL.H", "供应商": "XPS", "总分": 16, "扣分总分": 0, "扣分汇总": "无"}, {"大区": "MS 中南大区", "仓库": "CLT.H", "供应商": "Employer Solutions Services", "总分": 27, "扣分总分": 0, "扣分汇总": "无"}, {"大区": "WE 美西大区", "仓库": "CNO.H", "供应商": "JC-SL(Greatfast)", "总分": 45, "扣分总分": -30, "扣分汇总": "Onsite Mgr(-5分)、响应配合(-15分)、库内管理(-10分)"}, {"大区": "WE 美西大区", "仓库": "LAV.H", "供应商": "Select Hire", "总分": 34, "扣分总分": 0, "扣分汇总": "无"}, {"大区": "Ground项目部", "仓库": "ATL.G", "供应商": "Imperial", "总分": 47, "扣分总分": -5, "扣分汇总": "响应配合(-5分)"}, {"大区": "Ground项目部", "仓库": "CNO.G", "供应商": "Direct Jobs", "总分": 50, "扣分总分": 0, "扣分汇总": "无"}, {"大区": "Ground项目部", "仓库": "CNO.G", "供应商": "ERC", "总分": 49, "扣分总分": 0, "扣分汇总": "无"}, {"大区": "Ground项目部", "仓库": "CNO.G", "供应商": "XPS", "总分": 42, "扣分总分": 0, "扣分汇总": "无"}, {"大区": "Ground项目部", "仓库": "ORD.G", "供应商": "XPS", "总分": 23, "扣分总分": -5, "扣分汇总": "响应配合(-5分)"}, {"大区": "Ground项目部", "仓库": "SFO.G", "供应商": "XPS", "总分": 48, "扣分总分": 0, "扣分汇总": "无"}, {"大区": "TX 德州大区", "仓库": "IAH.H", "供应商": "Fast Staff", "总分": 38, "扣分总分": 0, "扣分汇总": "无"}]};console.log("Data inline");init();
+function init(){
+  // 确保DOM就绪后再渲染（导出HTML同步加载时需要）
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',()=>doInit());}
+  else{doInit();}
+}
+function doInit(){
+  renderKPIs(); renderCharts(); renderSupplierTable(); renderCrossRegion();
+  renderRegionDetail(); renderCostAnalysis(); renderInsurance(); renderRisk();
+  populateFilters();
+}
+function showPage(n,b){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('pg-'+n).classList.add('active');
+  document.querySelectorAll('.sidebar a').forEach(a=>a.classList.remove('active'));
+  b.classList.add('active');
+  if(n==='overview')setTimeout(renderCharts,100);
+  if(n==='cost')setTimeout(renderCostCharts,100);
+  if(n==='compliance')setTimeout(renderComplianceCharts,100);
+  if(n==='risk')setTimeout(renderRiskCharts,100);
+}
+
+// KPI
+function renderKPIs(){
+  const k=D.kpi;
+  document.getElementById('v1').textContent=FM(k.daily_avg_people);
+  document.getElementById('v2').textContent=FM(k.daily_avg_trips);
+  document.getElementById('v3').textContent=FM(k.total_hours);
+  document.getElementById('v4').textContent=FD(k.total_cost);
+  document.getElementById('v5').textContent=k.total_supplier_count;
+  document.getElementById('v5s').textContent=k.total_records+'条考核记录';
+  const aParts=k.a_pct.split('/'), dParts=k.d_pct.split('/'), cParts=k.coi_pct.split('/');
+  const aPct=aParts.length===2?Math.round(parseInt(aParts[0])/parseInt(aParts[1])*100):0;
+  const dPct=dParts.length===2?Math.round(parseInt(dParts[0])/parseInt(dParts[1])*100):0;
+  const cPct=cParts.length===2?Math.round(parseInt(cParts[0])/parseInt(cParts[1])*100):0;
+  document.getElementById('v6').textContent=k.a_suppliers; document.getElementById('v6s').textContent=k.a_pct;
+  document.getElementById('v6pct').textContent='占全美'+aPct+'%（不去重）';
+  document.getElementById('v7').textContent=k.d_suppliers; document.getElementById('v7s').textContent=k.d_pct;
+  document.getElementById('v7pct').textContent='占全美'+dPct+'%（不去重）';
+  document.getElementById('v8').textContent=k.coi_noncompliant; document.getElementById('v8s').textContent=k.coi_pct;
+  document.getElementById('v8pct').textContent='占全美'+cPct+'%（去重）';
+}
+
+// Charts
+let c1=null,c2=null;
+function renderCharts(){
+  const d1=D.cost_chart;
+  const ctx1=document.getElementById('chCost'); if(!ctx1||ctx1.clientWidth===0)return;
+  if(c1)c1.destroy(); if(c2)c2.destroy();
+  const totalCostAll=d1.reduce((s,x)=>s+x.total_cost,0);
+  c1=new Chart(ctx1,{type:'bar',data:{
+    labels:d1.map(x=>x.region),
+    datasets:[
+      {label:'计时成本',data:d1.map(x=>Math.round(x.time_cost)),backgroundColor:'#4f7df3',stack:'cost',barPercentage:.7,order:1},
+      {label:'计件成本',data:d1.map(x=>Math.round(x.piece_cost)),backgroundColor:'#a5b4fc',borderRadius:{topLeft:3,topRight:3},stack:'cost',barPercentage:.7,order:1},
+      {label:'总工时',data:d1.map(x=>Math.round(x.total_hours)),type:'line',borderColor:'#10b981',backgroundColor:'rgba(16,185,129,0.06)',fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#10b981',yAxisID:'y1',tension:.3,order:0}
+    ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:12,usePointStyle:true,pointStyleWidth:8}}},
+    tooltip:{callbacks:{footer:function(items){const i=items[0].dataIndex;const pct=totalCostAll>0?(d1[i].total_cost/totalCostAll*100).toFixed(1):0;return '该区域总成本占全美: '+pct+'%';}}},
+    scales:{y:{type:'linear',position:'left',grid:{color:'#f3f4f6'},ticks:{callback:v=>'$'+(v/1e6).toFixed(1)+'M',font:{size:9}}},
+            y1:{type:'linear',position:'right',grid:{display:false},ticks:{callback:v=>FM(v),font:{size:9}}}}}});
+
+  const d2=D.people_supplier_chart;
+  c2=new Chart(document.getElementById('chPeople'),{type:'bar',data:{
+    labels:d2.map(x=>x.region),
+    datasets:[
+      {label:'合规',data:d2.map(x=>x.compliant),backgroundColor:'#10b981',stack:'s',barPercentage:.7,order:1},
+      {label:'不合规',data:d2.map(x=>x.noncompliant),backgroundColor:'#f87171',borderRadius:{topLeft:3,topRight:3},stack:'s',barPercentage:.7,order:1},
+      {label:'日均人数',data:d2.map(x=>Math.round(x.daily_people)),type:'line',borderColor:'#8b5cf6',backgroundColor:'rgba(139,92,246,0.06)',fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#8b5cf6',yAxisID:'y1',tension:.3,order:0}
+    ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:12,usePointStyle:true,pointStyleWidth:8}}},
+    scales:{y:{type:'linear',position:'left',grid:{color:'#f3f4f6'},ticks:{font:{size:9}}},
+            y1:{type:'linear',position:'right',grid:{display:false},ticks:{callback:v=>FM(v),font:{size:9}}}}}});
+}
+
+// Supplier Table
+function renderSupplierTable(data){
+  data=data||D.supplier_table;
+  let h='';
+  data.forEach((r,i)=>{
+    const sc=r['总分']>=80?'shi':r['总分']>=60?'smd':'slo';
+    h+='<tr class="erow" onclick="toggleDet2('+i+')">';
+    h+='<td><span class="badge badge-'+r['等级']+'">'+r['等级']+'级</span></td>';
+    if(r['合规']==='不合规')h+='<td><span class="nc">不合规</span></td>';
+    else h+='<td><span style="color:#059669">合规</span></td>';
+    h+='<td>'+r['大区']+'</td><td>'+r['供应商']+'</td><td>'+r['仓库']+'</td>';
+    h+='<td>'+FM(r['日均使用人数'])+'</td><td>'+r['人数占比'].toFixed(1)+'%</td>';
+    h+='<td>$'+r['时薪'].toFixed(1)+'</td><td>'+r['markup']+'%</td>';
+    h+='<td>$'+r['结算价'].toFixed(1)+'</td><td class="'+sc+'"><strong>'+r['总分']+'</strong></td>';
+    h+='<td class="note">'+r['分析']+'</td></tr>';
+    h+='<tr class="det" id="det2-'+i+'" style="display:none;"><td colspan="12">';
+    h+='<div class="dg">';
+    h+='<div class="di"><span class="dn">报价竞争力</span><span class="dv'+(r['报价竞争力得分']>=60?' ok':'')+'">'+r['报价竞争力得分']+'分</span></div>';
+    h+='<div class="di"><span class="dn">派遣满足率</span><span class="dv'+(r['派遣满足率得分']>=60?' ok':'')+'">'+r['派遣满足率得分']+'分</span></div>';
+    h+='<div class="di"><span class="dn">考勤准确率</span><span class="dv'+(r['考勤准确率得分']>=60?' ok':'')+'">'+r['考勤准确率得分']+'分</span></div>';
+    h+='<div class="di"><span class="dn">人员稳定率</span><span class="dv'+(r['人员稳定率得分']>=60?' ok':'')+'">'+r['人员稳定率得分']+'分</span></div>';
+    h+='</div>';
+    if(r['扣分明细']&&Object.keys(r['扣分明细']).length>0){
+      h+='<div class="ded" style="text-align:left;">扣分项：';
+      Object.entries(r['扣分明细']).forEach(([k,v])=>{h+=k+'('+v+'分) ';});
+      h+='</div>';
+    }
+    if(r['不合规原因'])h+='<div style="padding:2px 14px 8px;color:#dc2626;font-size:10.5px;text-align:left;">不合规：'+r['不合规原因']+'</div>';
+    else h+='<div style="padding-bottom:6px;"></div>';
+    h+='</td></tr>';
+  });
+  document.getElementById('stb').innerHTML=h;
+}
+function toggleDet2(i){const e=document.getElementById('det2-'+i);if(e)e.style.display=e.style.display==='none'?'table-row':'none';}
+function populateFilters(){
+  const regions=[...new Set(D.supplier_table.map(r=>r['大区']))].sort();
+  const sel=document.getElementById('fReg');
+  regions.forEach(r=>{const o=document.createElement('option');o.value=r;o.textContent=r;sel.appendChild(o);});
+}
+function rst(){
+  let d=D.supplier_table;
+  const rg=document.getElementById('fReg').value,gr=document.getElementById('fGrd').value,cp=document.getElementById('fCmp').value;
+  if(rg)d=d.filter(r=>r['大区']===rg);
+  if(gr)d=d.filter(r=>r['等级']===gr);
+  if(cp)d=d.filter(r=>r['合规']===cp);
+  renderSupplierTable(d);
+}
+
+// Cross Region
+let crossChartInst=null;
+function renderCrossRegion(){
+  const grp={};
+  D.cross_region.forEach(r=>{if(!grp[r['供应商']])grp[r['供应商']]=[];grp[r['供应商']].push(r);});
+  let h='';
+  Object.entries(grp).forEach(([s,rows])=>{
+    rows.forEach((r,i)=>{
+      h+='<tr class="erow" onclick="showCrossChart(\''+s+'\',this)" data-supplier="'+s+'">';
+      if(i===0)h+='<td rowspan="'+rows.length+'" style="font-weight:600;cursor:pointer;text-align:center;">'+s+' ▸</td>';
+      h+='<td>'+r['大区']+'</td><td><span class="badge badge-'+r['等级']+'">'+r['等级']+'级</span></td>';
+      h+='<td>'+FM(r['日均使用人数'])+'</td><td>'+r['总分']+'</td>';
+      h+='<td>$'+r['时薪'].toFixed(1)+'</td><td>'+r['markup']+'%</td>';
+      h+='<td>$'+r['结算价'].toFixed(1)+'</td></tr>';
+    });
+  });
+  document.getElementById('crossTb').innerHTML=h;
+  document.getElementById('crossChart').style.display='none';
+}
+function showCrossChart(supplier,el){
+  document.getElementById('crossChart').style.display='block';
+  const rows=D.cross_region.filter(r=>r['供应商']===supplier);
+  const ctx=document.getElementById('chCross');
+  if(crossChartInst)crossChartInst.destroy();
+  crossChartInst=new Chart(ctx,{type:'bar',data:{
+    labels:rows.map(r=>r['大区']),
+    datasets:[
+      {label:'日均人数',data:rows.map(r=>r['日均使用人数']),backgroundColor:'#3b82f6',barPercentage:.6,yAxisID:'y',order:1,borderRadius:{topLeft:3,topRight:3}},
+      {label:'结算价($)',data:rows.map(r=>r['结算价']),type:'line',borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.08)',fill:true,borderWidth:2.5,pointRadius:5,pointBackgroundColor:'#f59e0b',yAxisID:'y1',tension:.3,order:0},
+      {label:'总分',data:rows.map(r=>r['总分']),type:'line',borderColor:'#10b981',backgroundColor:'rgba(16,185,129,0.06)',fill:true,borderWidth:2,pointRadius:4,pointBackgroundColor:'#10b981',yAxisID:'y1',tension:.3,order:0}
+    ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{title:{display:true,text:supplier+' 跨区域多维对比',font:{size:13,weight:'bold'}},legend:{position:'bottom',labels:{font:{size:10},padding:12,usePointStyle:true,pointStyleWidth:8}}},
+    scales:{y:{type:'linear',position:'left',grid:{color:'#f3f4f6'},ticks:{callback:v=>FM(v),font:{size:9}},title:{display:true,text:'日均人数',font:{size:9}}},
+            y1:{type:'linear',position:'right',grid:{display:false},ticks:{callback:v=>'$'+v,font:{size:9}},title:{display:true,text:'结算价/总分',font:{size:9}}}}}});
+
+  // Build analysis panel
+  const bestRegion=rows.reduce((a,b)=>a['总分']>b['总分']?a:b);
+  const worstRegion=rows.reduce((a,b)=>a['总分']<b['总分']?a:b);
+  const avgPrice=rows.reduce((s,r)=>s+r['结算价'],0)/rows.length;
+  const maxPrice=Math.max(...rows.map(r=>r['结算价']));
+  const minPrice=Math.min(...rows.map(r=>r['结算价']));
+  const priceSpread=maxPrice-minPrice;
+  let analysis='<div style="background:#f8fafc;border-radius:6px;padding:10px 12px;">';
+  analysis+='<div style="font-weight:600;font-size:12px;margin-bottom:6px;color:#0f172a;">📋 对比分析</div>';
+  analysis+='<div>服务 <b>'+rows.length+'</b> 个大区</div>';
+  analysis+='<div>最高分：<b style="color:#059669;">'+bestRegion['大区']+'</b>（'+bestRegion['总分']+'分）</div>';
+  analysis+='<div>最低分：<b style="color:#dc2626;">'+worstRegion['大区']+'</b>（'+worstRegion['总分']+'分）</div>';
+  analysis+='<div style="margin-top:4px;">结算价区间：<b>$'+minPrice.toFixed(1)+' ~ $'+maxPrice.toFixed(1)+'</b></div>';
+  analysis+='<div>价差：<b style="color:'+(priceSpread>2?'#dc2626':'#059669')+';">$'+priceSpread.toFixed(1)+'</b></div>';
+  analysis+='<div style="margin-top:4px;font-size:10px;color:#94a3b8;">平均结算价：$'+avgPrice.toFixed(1)+'</div>';
+  if(priceSpread>2)analysis+='<div style="margin-top:4px;font-size:10px;color:#d97706;">⚠ 区域价差较大，建议核查</div>';
+  analysis+='</div>';
+  document.getElementById('crossAnalysis').innerHTML=analysis;
+
+  document.querySelectorAll('#crossTb tr').forEach(r=>r.style.background='');
+  if(el)el.style.background='rgba(37,99,235,0.04)';
+}
+
+// Region Detail (tabbed)
+function renderRegionDetail(){
+  const regions=D.regions;
+  let tabs='';
+  regions.forEach((r,i)=>{tabs+='<span class="region-tab'+(i===0?' active':'')+'" onclick="switchRegion(\''+r+'\',this)">'+r+'</span>';});
+  document.getElementById('regionTabs').innerHTML=tabs;
+  switchRegion(regions[0],document.querySelector('.region-tab'));
+}
+function switchRegion(region,el){
+  document.querySelectorAll('.region-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  const dd=D.detail_by_region[region]||[];
+  // Get cost data for this region
+  const regionCostData=D.people_supplier_chart.find(r=>r.region===region);
+  const costPct=regionCostData?regionCostData.cost_pct:0;
+  const totalCost=regionCostData?regionCostData.total_cost:0;
+
+  let h='<div class="stat-mini">';
+  const totalPpl=dd.reduce((s,r)=>s+r['日均使用人数'],0);
+  const totalSupp=[...new Set(dd.map(r=>r['供应商']))].length;
+  const avgScore=dd.length>0?Math.round(dd.reduce((s,r)=>s+r['总分'],0)/dd.length):0;
+  h+='<div class="sm"><div class="v" style="color:#2563eb;">'+FM(totalPpl)+'</div><div class="l">日均人数</div></div>';
+  h+='<div class="sm"><div class="v">'+totalSupp+'</div><div class="l">供应商数</div></div>';
+  h+='<div class="sm"><div class="v" style="color:'+(avgScore>=80?'#059669':avgScore>=60?'#2563eb':'#dc2626')+';">'+avgScore+'</div><div class="l">平均总分</div></div>';
+  h+='<div class="sm"><div class="v" style="color:#d97706;">$'+(totalCost/1e6).toFixed(1)+'M</div><div class="l">总成本 · 占全美'+costPct+'%</div></div>';
+  h+='</div>';
+  h+='<div class="table-card"><div class="table-wrap" style="max-height:520px;"><table><thead><tr><th>评级</th><th>合规</th><th>仓库</th><th>供应商</th><th>日均人数</th><th>时薪</th><th>Markup</th><th>结算价</th><th>总分</th><th></th></tr></thead><tbody>';
+  dd.forEach((r,i)=>{
+    const sc=r['总分']>=80?'shi':r['总分']>=60?'smd':'slo';
+    h+='<tr class="erow" onclick="toggleRegDet(\''+region+'\','+i+')">';
+    h+='<td><span class="badge badge-'+r['等级']+'">'+r['等级']+'级</span></td>';
+    if(r['合规标签']==='不合规')h+='<td><span class="nc">不合规</span></td>';
+    else h+='<td><span style="color:#059669">合规</span></td>';
+    h+='<td class="wrh">'+r['仓库']+'</td><td class="sup">'+r['供应商']+'</td>';
+    h+='<td class="r">'+FM(r['日均使用人数'])+'</td><td class="r">$'+r['分拣工时薪'].toFixed(1)+'</td>';
+    h+='<td class="r">'+r['markup']+'%</td><td class="r">$'+r['分拣工结算价'].toFixed(1)+'</td>';
+    h+='<td class="r '+sc+'"><strong>'+r['总分']+'</strong></td><td style="color:#2563eb;font-size:10px;">▸</td></tr>';
+    h+='<tr class="det" id="regdet-'+region.replace(/[^a-zA-Z]/g,'')+'-'+i+'" style="display:none;"><td colspan="10">';
+    h+='<div style="display:flex;gap:14px;align-items:flex-start;padding:10px 14px;">';
+    // Radar chart
+    h+='<div style="width:200px;height:200px;flex-shrink:0;"><canvas id="radar-'+region.replace(/[^a-zA-Z]/g,'')+'-'+i+'"></canvas></div>';
+    // Detail scores
+    h+='<div style="flex:1;min-width:0;">';
+    h+='<div class="dg" style="grid-template-columns:1fr 1fr;">';
+    h+='<div class="di"><span class="dn">报价竞争力</span><span class="dv'+(r['报价竞争力得分']>=60?' ok':'')+'">'+(r['报价竞争力_pct']||'?')+'%（'+r['报价竞争力得分']+'分）</span></div>';
+    h+='<div class="di"><span class="dn">派遣满足率</span><span class="dv'+(r['派遣满足率得分']>=60?' ok':'')+'">'+(r['派遣满足率_pct']||'?')+'%（'+r['派遣满足率得分']+'分）</span></div>';
+    h+='<div class="di"><span class="dn">考勤准确率</span><span class="dv'+(r['考勤准确率得分']>=60?' ok':'')+'">'+(r['考勤准确率_pct']||'?')+'%（'+r['考勤准确率得分']+'分）</span></div>';
+    h+='<div class="di"><span class="dn">人员稳定率</span><span class="dv'+(r['人员稳定率得分']>=60?' ok':'')+'">'+(r['人员稳定率_pct']||'?')+'%（'+r['人员稳定率得分']+'分）</span></div>';
+    h+='<div class="di"><span class="dn">定量考核总分</span><span class="dv">'+r['定量考核总分']+'</span></div>';
+    h+='<div class="di"><span class="dn">Onsite Mgr管理幅宽</span><span class="dv">'+(r['onsite_manager_管理幅宽']*100).toFixed(1)+'%</span></div>';
+    h+='</div>';
+    // Deduction details
+    const dedList=r['扣分明细列表']||[];
+    if(dedList.length>0){
+      h+='<div style="margin-top:8px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:8px 12px;">';
+      h+='<div style="font-weight:700;font-size:11px;color:#dc2626;margin-bottom:6px;">扣分项明细（合计：'+r['扣分总计']+'分）</div>';
+      h+='<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+      dedList.forEach(dd=>{
+        h+='<div style="background:#fff;border:1px solid #fecaca;border-radius:4px;padding:4px 10px;font-size:10.5px;display:flex;align-items:center;gap:6px;">';
+        h+='<span style="color:#475569;font-weight:500;">'+dd['项目']+'</span>';
+        h+='<span style="color:#dc2626;font-weight:700;">'+dd['扣分']+'分</span>';
+        h+='</div>';
+      });
+      h+='</div></div>';
+    }
+    if(r['备注'])h+='<div style="padding:4px 0;font-size:10.5px;color:#64748b;text-align:left;">备注：'+r['备注']+'</div>';
+    if(r['合规标签']==='不合规')h+='<div style="padding:4px 0;color:#dc2626;font-size:10.5px;text-align:left;">不合规：'+r['不合规原因']+'</div>';
+    h+='</div></div>';
+    h+='</td></tr>';
+  });
+  h+='</tbody></table></div></div>';
+  document.getElementById('regionContent').innerHTML=h;
+}
+const radarInsts={};
+function toggleRegDet(region,i){
+  const key=region.replace(/[^a-zA-Z]/g,'')+'-'+i;
+  const e=document.getElementById('regdet-'+key);
+  if(!e)return;
+  const showing=e.style.display==='none';
+  e.style.display=showing?'table-row':'none';
+  if(showing){
+    setTimeout(()=>{
+      const canvas=document.getElementById('radar-'+key);
+      if(!canvas||canvas.clientWidth===0)return;
+      if(radarInsts[key])radarInsts[key].destroy();
+      const dd=D.detail_by_region[region]||[];
+      const r=dd[i]; if(!r)return;
+      // Calculate deduction impact: 100 = no deduction, 0 = heavy deduction (≥50 total deduction)
+      const dedTotal=Math.abs(parseInt(r['扣分汇总']?.match(/-?\d+/g)?.[0])||0);
+      const dedScore=Math.max(0,100-Math.min(100,Math.abs(dedTotal)*2));
+      radarInsts[key]=new Chart(canvas,{type:'radar',data:{
+        labels:['报价竞争力','派遣满足率','考勤准确率','人员稳定率','合规减分项'],
+        datasets:[{label:r['供应商'],
+          data:[r['报价竞争力得分'],r['派遣满足率得分'],r['考勤准确率得分'],r['人员稳定率得分'],dedScore],
+          backgroundColor:'rgba(79,125,243,0.15)',borderColor:'#4f7df3',borderWidth:2,pointBackgroundColor:'#4f7df3',pointRadius:4}]
+      },options:{responsive:true,maintainAspectRatio:true,
+        plugins:{legend:{display:false}},
+        scales:{r:{min:0,max:100,ticks:{stepSize:20,font:{size:8},backdropColor:'transparent'},pointLabels:{font:{size:8}},grid:{color:'#e2e8f0'}}}}
+      });
+    },100);
+  }
+}
+
+// Cost Analysis
+let c3=null,c4=null,c5=null;
+function renderCostCharts(){
+  const d=D.cost_analysis;
+  const ctx2=document.getElementById('chCost2'); if(!ctx2||ctx2.clientWidth===0)return;
+  if(c3)c3.destroy(); if(c4)c4.destroy(); if(c5)c5.destroy();
+  c3=new Chart(ctx2,{type:'bar',data:{
+    labels:d.map(x=>x['大区']),
+    datasets:[
+      {label:'计时成本',data:d.map(x=>Math.round(x['计时成本'])),backgroundColor:'#4f7df3',stack:'cost',barPercentage:.7,order:1},
+      {label:'计件成本',data:d.map(x=>Math.round(x['计件成本'])),backgroundColor:'#a5b4fc',borderRadius:{topLeft:3,topRight:3},stack:'cost',barPercentage:.7,order:1},
+      {label:'日均人数',data:d.map(x=>Math.round(x['日均人数'])),type:'line',borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.06)',fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#f59e0b',yAxisID:'y1',tension:.3,order:0}
+    ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:12,usePointStyle:true,pointStyleWidth:8}}},
+    scales:{y:{type:'linear',position:'left',grid:{color:'#f3f4f6'},ticks:{callback:v=>'$'+(v/1e6).toFixed(1)+'M',font:{size:9}}},
+            y1:{type:'linear',position:'right',grid:{display:false},ticks:{callback:v=>FM(v),font:{size:9}}}}}});
+
+  // Profit chart
+  // Profit chart — stacked bar: 时薪(base) + 雇主成本(middle) + 利润(top) = 结算价, line = 结算价标线
+  // Use region-specific employer cost rates
+  const profitBars=d.map(x=>{
+    const ecRate=x['雇主成本率']||0.12;
+    return Math.round((x['平均结算价']-x['平均时薪']-x['平均时薪']*ecRate)*100)/100;
+  });
+  const empCostBars=d.map(x=>{
+    const ecRate=x['雇主成本率']||0.12;
+    return Math.round(x['平均时薪']*ecRate*100)/100;
+  });
+  const wageBars=d.map(x=>Math.round(x['平均时薪']*100)/100);
+  c4=new Chart(document.getElementById('chProfit'),{type:'bar',data:{
+    labels:d.map(x=>x['大区']),
+    datasets:[
+      {label:'时薪（工人所得）',data:wageBars,backgroundColor:'#93c5fd',stack:'profit',barPercentage:.65,order:1},
+      {label:'雇主成本(WC+税+管理)',data:empCostBars,backgroundColor:'#fca5a5',stack:'profit',barPercentage:.65,order:1},
+      {label:'供应商利润',data:profitBars,backgroundColor:'#6ee7b7',stack:'profit',barPercentage:.65,order:1},
+      {label:'结算价',data:d.map(x=>Math.round(x['平均结算价']*100)/100),type:'line',borderColor:'#0f172a',borderWidth:2,pointRadius:4,pointBackgroundColor:'#0f172a',yAxisID:'y',order:0,borderDash:[4,3]}
+    ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:12,usePointStyle:true,pointStyleWidth:8}},
+      tooltip:{callbacks:{footer:function(items){const i=items[0].dataIndex;const p=profitBars[i];const pct=d[i]['平均结算价']>0?(p/d[i]['平均结算价']*100).toFixed(1):0;return '利润率: '+pct+'% | 利润: $'+p.toFixed(2);}}}},
+    scales:{y:{grid:{color:'#f3f4f6'},ticks:{callback:v=>'$'+v,font:{size:9}},title:{display:true,text:'$/小时',font:{size:9}}}}}});
+  // Ladder matrix table (用工量×利润率 交叉对照) + 汇总行
+  const lm=D.ladder_matrix||[];
+  const ld=D.ladder_data||[];
+  let lh='';
+  const profitHeaders=['≥20%','10%-20%','5%-10%','0%-5%','<0%（需核查）'];
+  let totalCount=0, totalCost=0, totalSaving=0;
+  lm.forEach((row,i)=>{
+    const ldRow=ld[i]||{};
+    totalCount+=ldRow['count']||0; totalCost+=ldRow['current_cost']||0; totalSaving+=ldRow['annual_saving']||0;
+    lh+='<tr><td><strong>'+row['用量阶梯'].split(': ')[1]+'</strong></td>';
+    profitHeaders.forEach(h=>{
+      const v=row[h]||'';
+      const isDiscount=v.startsWith('降');
+      lh+='<td style="text-align:center;font-weight:600;color:'+(isDiscount?'#dc2626':'#94a3b8')+';">'+v+'</td>';
+    });
+    lh+='<td>'+ldRow['count']+'家</td>';
+    lh+='<td>$'+FM(ldRow['current_cost']||0)+'</td>';
+    lh+='<td style="color:#059669;font-weight:600;">$'+FM(ldRow['annual_saving']||0)+'</td></tr>';
+  });
+  // Summary row
+  lh+='<tr style="background:#f0f9ff;font-weight:700;border-top:2px solid #3b82f6;"><td><strong>汇总</strong></td>';
+  profitHeaders.forEach(()=>lh+='<td></td>');
+  lh+='<td>'+totalCount+'家</td><td>$'+FM(totalCost)+'</td><td style="color:#059669;">$'+FM(totalSaving)+'</td></tr>';
+  document.getElementById('ladderMatrixBody').innerHTML=lh;
+}
+
+function renderCostAnalysis(){
+  let ph=''; D.cost_analysis.forEach(r=>{
+    const ecRate=r['雇主成本率']||0.12, ec=r['雇主成本']||(r['平均时薪']*ecRate), pf=r['利润_per_h']||(r['平均结算价']-r['平均时薪']-ec), pfp=r['利润率']||(r['平均结算价']>0?pf/r['平均结算价']*100:0);
+    let sug=pfp>15?'降5%-8%':pfp>10?'降3%-5%':pfp>5?'降1%-3%':pfp>0?'维持现价':'<span style=\"color:#dc2626;\">核查成本</span>';
+    ph+='<tr><td>'+r['大区']+'</td><td>'+FM(r['日均人数'])+'</td>';
+    ph+='<td>$'+r['平均时薪'].toFixed(1)+'</td><td>$'+r['平均结算价'].toFixed(1)+'</td>';
+    ph+='<td>'+r['平均markup']+'%</td><td>'+(ecRate*100).toFixed(1)+'%</td>';
+    ph+='<td>$'+ec.toFixed(2)+'</td><td style="color:'+(pf>0?'#2563eb':'#dc2626')+';font-weight:600;">$'+pf.toFixed(2)+'</td><td>'+pfp.toFixed(1)+'%</td><td>'+sug+'</td></tr>';
+  });
+  document.getElementById('profitTb').innerHTML=ph;
+
+  // Supplier cost structure + negotiation table
+  const nego=D.supplier_negotiation||[];
+  let nh=''; nego.forEach((r,i)=>{
+    const pr=r['利润率']; const disc=r['建议降价%']; const profitColor=pr>10?'#059669':pr>0?'#2563eb':'#dc2626';
+    const rowBg=pr>15?'background:#f0fdf4;':pr<0?'background:#fef2f2;':'';
+    let discDisplay=disc>0?'<b style=\"color:#dc2626;\">降'+disc+'%</b>':(pr<0?'<span style=\"color:#dc2626;\">需核查</span>':'<span style=\"color:#64748b;\">维持</span>');
+    let strategy=r['谈价策略']||'';
+    nh+='<tr style=\"'+rowBg+'\">';
+    nh+='<td>'+(i+1)+'</td><td><strong>'+r['供应商']+'</strong></td><td style=\"font-size:10px;max-width:80px;white-space:normal;line-height:1.3;\">'+r['大区']+'</td>';
+    nh+='<td style=\"font-size:10px;font-weight:500;\">'+r['仓库']+'</td>';
+    nh+='<td>'+FM(r['日均人数'])+'</td><td>$'+r['结算价'].toFixed(2)+'</td>';
+    nh+='<td>$'+(r['时薪']||0).toFixed(2)+'</td>';
+    nh+='<td>$'+(r['雇主成本/h']||0).toFixed(2)+'</td>';
+    nh+='<td style=\"color:'+profitColor+';font-weight:700;\">$'+r['利润/h'].toFixed(2)+'</td>';
+    nh+='<td style=\"color:'+profitColor+';font-weight:600;\">'+pr.toFixed(1)+'%</td>';
+    nh+='<td>'+discDisplay+'</td>';
+    nh+='<td>$'+FM(r['当月成本']||0)+'</td>';
+    nh+='<td>$'+FM(r['预计年节省'])+'</td>';
+    nh+='<td style=\"font-size:9.5px;color:#475569;max-width:260px;white-space:normal;line-height:1.4;\">'+strategy+'</td></tr>';
+  });
+  document.getElementById('negoTb').innerHTML=nh;
+  setTimeout(renderCostCharts,100);
+}
+
+// Compliance Charts
+let c6=null,c7=null;
+function renderComplianceCharts(){
+  const total=D.kpi.total_supplier_count, ncomp=D.kpi.coi_noncompliant;
+  const ctx6=document.getElementById('chCOI'); if(!ctx6||ctx6.clientWidth===0)return;
+  if(c6)c6.destroy(); if(c7)c7.destroy();
+  c6=new Chart(ctx6,{type:'doughnut',data:{
+    labels:['合规','不合规'], datasets:[{data:[total-ncomp,ncomp],backgroundColor:['#10b981','#ef4444'],borderWidth:0}]
+  },options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:12}}}}}); 
+
+  const rd=D.people_supplier_chart;
+  c7=new Chart(document.getElementById('chNonCompByRegion'),{type:'bar',data:{
+    labels:rd.map(x=>x.region),
+    datasets:[
+      {label:'合规',data:rd.map(x=>x.compliant),backgroundColor:'#10b981',stack:'s',barPercentage:.6,order:1},
+      {label:'不合规',data:rd.map(x=>x.noncompliant),backgroundColor:'#ef4444',borderRadius:{topLeft:3,topRight:3},stack:'s',barPercentage:.6,order:1}
+    ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:12,usePointStyle:true,pointStyleWidth:8}},
+      tooltip:{callbacks:{footer:function(items){const i=items[0].dataIndex;const t=rd[i].total_suppliers;return '供应商总数: '+t;}}}},
+    scales:{y:{grid:{color:'#f3f4f6'},stacked:true,ticks:{font:{size:9}},title:{display:true,text:'供应商数',font:{size:9}}}}}});
+}
+
+// Insurance
+function renderInsurance(){
+  let h=''; D.insurance.forEach(r=>{
+    h+='<tr><td>'+r['区域']+'</td><td>'+r['供应商']+'</td>';
+    h+='<td style="color:#dc2626;">'+r['存在问题']+'</td><td>'+r['区域反馈进度']+'</td>';
+    h+='<td>'+(r['区长是否知悉']==='是'?'<span style="color:#059669;font-weight:600;">是</span>':r['区长是否知悉']||'-')+'</td>';
+    h+='<td>'+r['责任人']+'</td><td>'+r['DDL']+'</td></tr>';
+  });
+  document.getElementById('insTb').innerHTML=h;
+
+  // Noncompliant cards
+  const nc=D.noncompliant_cards||[];
+  let nch='';
+  nc.forEach(r=>{
+    nch+='<div class="cc"><div class="ci">⚠️</div><div class="ct"><div class="cn">'+r['供应商']+' <span style="font-weight:400;color:#94a3b8;font-size:10.5px;">· '+r['大区']+' · '+r['仓库']+'</span></div>';
+    nch+='<div class="cd">'+r['问题']+'</div><div class="ca">处理建议：立即整改，补办Workers Compensation保险</div></div></div>';
+  });
+  document.getElementById('noncompliantCards').innerHTML=nch;
+
+  setTimeout(renderComplianceCharts,200);
+}
+
+// Risk Charts
+let c8=null,c9=null;
+function renderRiskCharts(){
+  const ctx8=document.getElementById('chGrade'); if(!ctx8||ctx8.clientWidth===0)return;
+  if(c8)c8.destroy(); if(c9)c9.destroy();
+  const grades={A:D.kpi.a_suppliers,B:0,C:0,D:D.kpi.d_suppliers};
+  D.supplier_table.forEach(r=>{if(r['等级']==='B')grades.B++;if(r['等级']==='C')grades.C++;});
+  c8=new Chart(ctx8,{type:'doughnut',data:{
+    labels:['A级','B级','C级','D级'],
+    datasets:[{data:[grades.A,grades.B,grades.C,grades.D],backgroundColor:['#10b981','#3b82f6','#f59e0b','#ef4444'],borderWidth:0}]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:12}}}}});
+
+  const scores=D.supplier_table.map(r=>r['总分']);
+  const buckets={'>80':0,'60-80':0,'40-60':0,'<40':0};
+  scores.forEach(s=>{if(s>=80)buckets['>80']++;else if(s>=60)buckets['60-80']++;else if(s>=40)buckets['40-60']++;else buckets['<40']++;});
+  c9=new Chart(document.getElementById('chScoreDist'),{type:'bar',data:{
+    labels:['<40分','40-60分','60-80分','>80分'],
+    datasets:[{data:[buckets['<40'],buckets['40-60'],buckets['60-80'],buckets['>80']],backgroundColor:['#ef4444','#f59e0b','#3b82f6','#10b981'],barPercentage:.6}]
+  },options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{y:{grid:{color:'#f3f4f6'},ticks:{font:{size:9}}}}}});
+}
+
+// Risk
+function renderRisk(){
+  // Risk stats cards
+  const rs=D.risk_stats||{};
+  document.getElementById('cardLowScore').querySelector('.val').textContent=rs.low_score_count||0;
+  document.getElementById('cardDeduction').querySelector('.val').textContent=rs.has_deduction||0;
+
+  // Accident card with details
+  const al=rs.accident_list||[];
+  let ah='<div class="lbl">库内安全事故</div><div class="val" style="color:#dc2626;">'+(rs.accident_count||0)+'起</div>';
+  if(al.length>0){
+    ah+='<div style="margin-top:6px;font-size:10px;color:#475569;line-height:1.5;max-height:90px;overflow-y:auto;">';
+    al.forEach(a=>{
+      ah+='<div style="margin-bottom:4px;padding:4px 6px;background:#fef2f2;border-radius:4px;border-left:2px solid #ef4444;">';
+      ah+='<span style="color:#dc2626;font-weight:600;">'+a['大区']+' · '+a['仓库']+'</span> <span style="font-weight:500;">'+a['供应商']+'</span>';
+      ah+='<div style="color:#64748b;font-size:9.5px;margin-top:1px;">'+a['事件']+'</div></div>';
+    });
+    ah+='</div>';
+  }
+  document.getElementById('accidentCard').innerHTML=ah;
+
+  // High risk table (<50) — removed 操作指引 column
+  const hr=D.high_risk||[];
+  let hrh=''; hr.forEach(r=>{
+    hrh+='<tr style="background:rgba(220,38,38,0.02);"><td>'+r['大区']+'</td><td>'+r['仓库']+'</td><td><strong>'+r['供应商']+'</strong></td>';
+    hrh+='<td class="r" style="color:#dc2626;font-weight:700;">'+r['总分']+'</td>';
+    hrh+='<td class="r" style="color:#dc2626;">'+(r['扣分总分']!==0?r['扣分总分']:'0')+'</td>';
+    hrh+='<td style="font-size:10px;max-width:200px;white-space:normal;">'+r['扣分汇总']+'</td>';
+    hrh+='<td style="color:#d97706;font-weight:600;">限期整改</td></tr>';
+  });
+  document.getElementById('highRiskTb').innerHTML=hrh;
+  setTimeout(renderRiskCharts,200);
+}
+
+// ─── 导出功能 ───
+function exportHTML(){
+  const jsonStr=JSON.stringify(D);
+  // 用fetch下载原始dashboard.html模板，然后用JS在客户端替换
+  fetch('dashboard.html')
+    .then(r=>r.text())
+    .then(template=>{
+      // 在原始模板中找到 let D={}; 到 function init 之间的fetch块并替换
+      const idxD=template.indexOf('let D={};');
+      const idxInit=template.indexOf('\nfunction init',idxD);
+      if(idxD===-1||idxInit===-1){alert('导出失败：模板解析错误');return;}
+      const before=template.substring(0,idxD);
+      const after=template.substring(idxInit);
+      const shareHTML=before+'let D='+jsonStr+';console.log(\"Data inline\");init();'+after;
+      const blob=new Blob(['<!DOCTYPE html>\n'+shareHTML],{type:'text/html;charset=utf-8'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;
+      a.download='GUS_劳务供应商管理看板_'+new Date().toISOString().slice(0,10)+'.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      alert('HTML文件已下载！可直接发送给他人用浏览器打开查看。');
+    })
+    .catch(()=>alert('导出失败，请确认服务器正常运行'));
+}
+
+function exportPDF(){
+  // 使用浏览器打印功能导出PDF
+  const title=document.querySelector('.topbar h1');
+  const origTitle=title?title.textContent:'';
+  if(title)title.textContent=origTitle;
+  window.print();
+  if(title)title.textContent=origTitle;
+}
+</script>
+</body>
+</html>
