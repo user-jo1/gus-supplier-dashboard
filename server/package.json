@@ -1,0 +1,19 @@
+{
+  "name": "gus-dashboard-server",
+  "version": "1.0.0",
+  "description": "GUS 劳务供应商管理看板 - 后端服务",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build": "node build-minify.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
+    "hpp": "^0.2.3",
+    "express-mongo-sanitize": "^2.2.0",
+    "compression": "^1.7.4",
+    "morgan": "^1.10.0"
+  }
+}

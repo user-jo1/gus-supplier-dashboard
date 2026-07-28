@@ -1,0 +1,14 @@
+# 构建时忽略的文件（这些不会进入 Docker 镜像）
+node_modules/
+.git/
+.gitignore
+*.py
+*.sh
+*.md
+deploy.sh
+check.sh
+build_data.py
+build_dashboard.py
+server/node_modules/
+.codebuddy/
+.DS_Store

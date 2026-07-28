@@ -1,0 +1,68 @@
+version: '3.8'
+
+# ============================================================
+# GUS 劳务供应商管理看板 - Docker Compose 部署配置
+# 
+# 使用方式：
+#   启动: docker compose up -d
+#   停止: docker compose down
+#   查看日志: docker compose logs -f
+#   重启: docker compose restart
+# ============================================================
+
+services:
+  # ── 方案 A：Nginx 反向代理 + Node.js 应用（推荐生产环境）──
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: gus-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d/:/etc/nginx/conf.d/:ro
+      # SSL证书目录（如不需要HTTPS可注释掉）
+      # - ./nginx/ssl/:/etc/nginx/ssl/:ro
+    depends_on:
+      - app
+    restart: unless-stopped
+    networks:
+      - gus-network
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gus-dashboard
+    # 仅暴露给 nginx，不对外
+    expose:
+      - "3000"
+    restart: unless-stopped
+    networks:
+      - gus-network
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  gus-network:
+    driver: bridge
