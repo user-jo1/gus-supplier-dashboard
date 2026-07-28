@@ -4,15 +4,40 @@ import numpy as np
 
 # ─── 读取数据源 ───
 may_xlsx = '/Users/mac/Downloads/GUS_劳务供应商考核数据-2.xlsx'
-jun_xlsx = '/Users/mac/Downloads/GUS_劳务供应商考核数据-3.xlsx'
+jun_xlsx = '/Users/mac/Desktop/GF_HR/01-劳务工:供应商管理/GUS_劳务供应商考核数据-6月xlsx.xlsx'
 
-df_may = pd.read_excel(may_xlsx, sheet_name='数据总表')
-df_summary_may = pd.read_excel(may_xlsx, sheet_name='人数、人次、出勤工时、总成本')
-df_insurance_may = pd.read_excel(may_xlsx, sheet_name='保险合规进度')
-df_cost_detail_may = pd.read_excel(may_xlsx, sheet_name='供应商成本明细')
+# 读取已有JSON（保留5月数据）
+with open('/Users/mac/CodeBuddy/20260618112854/dashboard_data.json', 'r', encoding='utf-8') as f:
+    _existing_data = json.load(f)
+_may_kpi = _existing_data.get('kpi', {})
+_may_cost_chart = _existing_data.get('cost_chart', [])
+_may_people_chart = _existing_data.get('people_supplier_chart', [])
+
+# 尝试读取5月原始Excel
+_may_available = True
+try:
+    df_may = pd.read_excel(may_xlsx, sheet_name='数据总表')
+    df_summary_may = pd.read_excel(may_xlsx, sheet_name='人数、人次、出勤工时、总成本')
+    df_insurance_may = pd.read_excel(may_xlsx, sheet_name='保险合规进度')
+    df_cost_detail_may = pd.read_excel(may_xlsx, sheet_name='供应商成本明细')
+except:
+    _may_available = False
+    df_may = pd.DataFrame()
+    df_summary_may = pd.DataFrame()
+    df_insurance_may = pd.DataFrame()
+    df_cost_detail_may = pd.DataFrame()
 
 df_jun = pd.read_excel(jun_xlsx, sheet_name='数据收集表')
 df_jun = df_jun[df_jun['月份'] == '2026年 6月'].copy()
+
+# 6月汇总数据
+df_summary_jun = pd.read_excel(jun_xlsx, sheet_name='汇总数据')
+# 过滤掉总计行和NaN行
+df_summary_jun = df_summary_jun[df_summary_jun['三级组织'].notna() & (df_summary_jun['三级组织'] != '总计') & (df_summary_jun['三级组织'] != '计时+计件总人数')]
+# 重命名成本列
+cost_col = '总成本（计时）-不含正工挂靠、司机'
+if cost_col in df_summary_jun.columns:
+    df_summary_jun.rename(columns={cost_col: '总成本（计时）'}, inplace=True)
 
 # ─── 通用工具函数 ───
 def sf(v):
@@ -672,9 +697,29 @@ for label, lo, hi in tier_ranges:
         'current_cost': current_cost,
     })
 
+# ─── 6月汇总数据 ───
+jun_summary_data = df_summary_jun[df_summary_jun['三级组织'].notna()]
+jun_total_ppl_sum = sf(jun_summary_data['计时人数（日均）'].sum()) + sf(jun_summary_data['计件人数（日均）'].sum())
+jun_total_time_ppl = sf(jun_summary_data['计时人数（日均）'].sum())
+jun_total_piece_ppl = sf(jun_summary_data['计件人数（日均）'].sum())
+jun_total_hours_sum = sf(jun_summary_data['总工时数'].sum())
+jun_total_cost_sum = sf(jun_summary_data['总成本'].sum())
+jun_daily_trips = jun_total_hours_sum / 22.0 / 8.0
+
+# 5月 vs 6月对比数据
+jun_cost_chart = []
+for _, row in jun_summary_data.iterrows():
+    daily_ppl = round(sf(row['计时人数（日均）']) + sf(row['计件人数（日均）']))
+    jun_cost_chart.append({
+        'region': row['三级组织'], 'time_cost': sf(row['总成本（计时）']),
+        'piece_cost': sf(row['总成本（计件）']), 'total_cost': sf(row['总成本']),
+        'total_hours': sf(row['总工时数']), 'daily_people': daily_ppl,
+    })
+
 # ─── 最终输出 ───
 output = {
     'kpi': {
+        # 5月数据（保持原有）
         'daily_avg_people': round(daily_avg_people), 'daily_avg_people_time': round(daily_avg_people_time),
         'daily_avg_people_piece': round(daily_avg_people_piece),
         'daily_avg_trips': round(daily_avg_trips),
@@ -683,13 +728,26 @@ output = {
         'a_suppliers': a_suppliers, 'a_pct': f'{a_records}/{total_records}',
         'd_suppliers': d_suppliers, 'd_pct': f'{d_records}/{total_records}',
         'coi_noncompliant': noncompliant_suppliers, 'coi_pct': f'{noncompliant_suppliers}/{total_supplier_count}',
+        # 6月数据
+        'jun_daily_avg_people': round(jun_total_ppl_sum),
+        'jun_daily_avg_people_time': round(jun_total_time_ppl),
+        'jun_daily_avg_people_piece': round(jun_total_piece_ppl),
+        'jun_daily_avg_trips': round(jun_daily_trips),
+        'jun_total_hours': round(jun_total_hours_sum),
+        'jun_total_cost': round(jun_total_cost_sum),
+        'jun_total_supplier_count': jun_total_supp,
+        'jun_total_records': jun_total_records,
+        'jun_a_suppliers': jun_a, 'jun_a_pct': f'{jun_a_rec}/{jun_total_records}',
+        'jun_d_suppliers': jun_d, 'jun_d_pct': f'{jun_d_rec}/{jun_total_records}',
+        'jun_coi_noncompliant': jun_ncomp,
+        'jun_coi_pct': f'{jun_ncomp}/{jun_total_supp}',
     },
     'cost_chart': region_cost, 'people_supplier_chart': region_supplier_data,
+    'cost_chart_jun': jun_cost_chart, 'people_supplier_chart_jun': region_supplier_jun,
     'supplier_table': supplier_table, 'cross_region': cross_region,
     'insurance': insurance,
     'detail_by_region': detail_by_region_may,
     'detail_by_region_jun': detail_by_region_jun,
-    'people_supplier_chart_jun': region_supplier_jun,
     'cost_analysis': cost_analysis,
     'total_daily_people': round(daily_avg_people),
     'regions': regions_order,

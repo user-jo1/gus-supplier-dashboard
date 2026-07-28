@@ -13,7 +13,21 @@
     "d_suppliers": 8,
     "d_pct": "13/66",
     "coi_noncompliant": 7,
-    "coi_pct": "7/41"
+    "coi_pct": "7/41",
+    "jun_daily_avg_people": 5247,
+    "jun_daily_avg_people_time": 4032,
+    "jun_daily_avg_people_piece": 1215,
+    "jun_daily_avg_trips": 6338,
+    "jun_total_hours": 1115525,
+    "jun_total_cost": 23864787,
+    "jun_total_supplier_count": 46,
+    "jun_total_records": 87,
+    "jun_a_suppliers": 13,
+    "jun_a_pct": "14/87",
+    "jun_d_suppliers": 4,
+    "jun_d_pct": "14/87",
+    "jun_coi_noncompliant": 14,
+    "jun_coi_pct": "14/46"
   },
   "cost_chart": [
     {
@@ -8711,5 +8725,63 @@
   "months": [
     "2026年5月",
     "2026年6月"
+  ],
+  "cost_chart_jun": [
+    {
+      "region": "FL 佛州大区",
+      "time_cost": 2045310.4219999998,
+      "piece_cost": 0.0,
+      "total_cost": 2045310.4219999998,
+      "total_hours": 115735.282,
+      "daily_people": 508
+    },
+    {
+      "region": "GL 大湖大区",
+      "time_cost": 3706564.96,
+      "piece_cost": 168920.48,
+      "total_cost": 3875485.44,
+      "total_hours": 200283.69999999998,
+      "daily_people": 866
+    },
+    {
+      "region": "Ground项目部",
+      "time_cost": 553880.3199857143,
+      "piece_cost": 0.0,
+      "total_cost": 553880.3199857143,
+      "total_hours": 25197.36614285714,
+      "daily_people": 106
+    },
+    {
+      "region": "MS 中南大区",
+      "time_cost": 3048213.953057143,
+      "piece_cost": 0.0,
+      "total_cost": 3048213.953057143,
+      "total_hours": 152070.85519047626,
+      "daily_people": 620
+    },
+    {
+      "region": "NE 东北大区",
+      "time_cost": 6815095.840000004,
+      "piece_cost": 0.0,
+      "total_cost": 6815095.840000004,
+      "total_hours": 356507.75999999983,
+      "daily_people": 1138
+    },
+    {
+      "region": "TX 德州大区",
+      "time_cost": 1345303.2699999998,
+      "piece_cost": 1164421.02,
+      "total_cost": 2509724.29,
+      "total_hours": 79104.62000000002,
+      "daily_people": 963
+    },
+    {
+      "region": "WE 美西大区",
+      "time_cost": 3979099.019999999,
+      "piece_cost": 1037977.5314285714,
+      "total_cost": 5017076.55142857,
+      "total_hours": 186625.21000000002,
+      "daily_people": 1046
+    }
   ]
 }

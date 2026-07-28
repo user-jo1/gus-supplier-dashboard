@@ -187,21 +187,30 @@ td.sup{max-width:130px;white-space:normal;text-align:left;font-weight:600}
 <!-- ===== 汇总看板 ===== -->
 <div class="page" id="pg-overview">
 <div class="stat-cards">
-  <div class="stat-card p"><div class="lbl">日均用工总人数</div><div class="val" id="v1">-</div><div class="sub" id="v1s">全美仓库劳务工</div></div>
-  <div class="stat-card"><div class="lbl">日均用工总人次</div><div class="val" id="v2">-</div><div class="sub">总工时÷22÷8</div></div>
-  <div class="stat-card"><div class="lbl">总工时</div><div class="val" id="v3">-</div><div class="sub">小时</div></div>
-  <div class="stat-card"><div class="lbl">总成本</div><div class="val" id="v4">-</div><div class="sub">计时+计件</div></div>
+  <div class="stat-card p"><div class="lbl">日均用工总人数</div><div class="val" id="v1">-</div><div class="sub" id="v1s">全美仓库劳务工</div><div class="sub" id="v1d" style="font-weight:700;margin-top:2px;"></div></div>
+  <div class="stat-card"><div class="lbl">日均用工总人次</div><div class="val" id="v2">-</div><div class="sub">总工时÷22÷8</div><div class="sub" id="v2d" style="font-weight:700;margin-top:2px;"></div></div>
+  <div class="stat-card"><div class="lbl">总工时</div><div class="val" id="v3">-</div><div class="sub">小时</div><div class="sub" id="v3d" style="font-weight:700;margin-top:2px;"></div></div>
+  <div class="stat-card"><div class="lbl">总成本</div><div class="val" id="v4">-</div><div class="sub">计时+计件</div><div class="sub" id="v4d" style="font-weight:700;margin-top:2px;"></div></div>
 </div>
 <div class="stat-cards">
-  <div class="stat-card"><div class="lbl">供应商总数（去重）</div><div class="val" id="v5">-</div><div class="sub" id="v5s"></div></div>
-  <div class="stat-card s"><div class="lbl">A级供应商数</div><div class="val" id="v6">-</div><div class="sub" id="v6s"></div><div class="sub" id="v6pct" style="color:#059669;font-weight:600;"></div></div>
-  <div class="stat-card d"><div class="lbl">D级供应商数</div><div class="val" id="v7">-</div><div class="sub" id="v7s"></div><div class="sub" id="v7pct" style="color:#dc2626;font-weight:600;"></div></div>
-  <div class="stat-card w"><div class="lbl">COI不合规供应商</div><div class="val" id="v8">-</div><div class="sub" id="v8s"></div><div class="sub" id="v8pct" style="color:#d97706;font-weight:600;"></div></div>
+  <div class="stat-card"><div class="lbl">供应商总数（去重）</div><div class="val" id="v5">-</div><div class="sub" id="v5s"></div><div class="sub" id="v5d" style="font-weight:700;margin-top:2px;"></div></div>
+  <div class="stat-card s"><div class="lbl">A级供应商数</div><div class="val" id="v6">-</div><div class="sub" id="v6s"></div><div class="sub" id="v6pct" style="color:#059669;font-weight:600;"></div><div class="sub" id="v6d" style="font-weight:700;margin-top:2px;"></div></div>
+  <div class="stat-card d"><div class="lbl">D级供应商数</div><div class="val" id="v7">-</div><div class="sub" id="v7s"></div><div class="sub" id="v7pct" style="color:#dc2626;font-weight:600;"></div><div class="sub" id="v7d" style="font-weight:700;margin-top:2px;"></div></div>
+  <div class="stat-card w"><div class="lbl">COI不合规供应商</div><div class="val" id="v8">-</div><div class="sub" id="v8s"></div><div class="sub" id="v8pct" style="color:#d97706;font-weight:600;"></div><div class="sub" id="v8d" style="font-weight:700;margin-top:2px;"></div></div>
 </div>
 
 <div class="charts-row">
   <div class="chart-card"><h3>各区域用工成本 · 总工时趋势</h3><div class="chart-wrap"><canvas id="chCost"></canvas></div></div>
   <div class="chart-card"><h3>各区域日均人数 · 供应商合规分布</h3><div class="chart-wrap"><canvas id="chPeople"></canvas></div></div>
+</div>
+
+<div class="charts-row">
+  <div class="chart-card"><h3>5月 vs 6月 各区域成本对比</h3><div class="chart-wrap" style="height:240px;"><canvas id="chCostCompare"></canvas></div></div>
+  <div class="chart-card"><h3>5月 vs 6月 各区域人数对比</h3><div class="chart-wrap" style="height:240px;"><canvas id="chPeopleCompare"></canvas></div></div>
+</div>
+<div class="charts-row">
+  <div class="chart-card"><h3>5月 vs 6月 各区域工时对比</h3><div class="chart-wrap" style="height:240px;"><canvas id="chHoursCompare"></canvas></div></div>
+  <div class="chart-card"><h3></h3><div class="chart-wrap" style="height:240px;"></div></div>
 </div>
 
 <div class="table-card"><h3>供应商数据汇总</h3>
@@ -447,6 +456,7 @@ function showPage(n,b){
 // KPI
 function renderKPIs(){
   const k=D.kpi;
+  // 5月数据（主体显示）
   document.getElementById('v1').textContent=FM(k.daily_avg_people);
   document.getElementById('v1s').textContent='计时'+FM(k.daily_avg_people_time)+' + 计件'+FM(k.daily_avg_people_piece)+'人';
   document.getElementById('v2').textContent=FM(k.daily_avg_trips);
@@ -464,12 +474,33 @@ function renderKPIs(){
   document.getElementById('v7pct').textContent='占全美'+dPct+'%（不去重）';
   document.getElementById('v8').textContent=k.coi_noncompliant; document.getElementById('v8s').textContent=k.coi_pct;
   document.getElementById('v8pct').textContent='占全美'+cPct+'%（去重）';
+
+  // 6月对比数据
+  function diffStr(may, jun, isCost){
+    const m=may||0, j=jun||0;
+    if(j===0)return '';
+    const d=j-m;
+    const pct=Math.round(d/m*100);
+    const sign=d>0?'↑':'↓';
+    const color=d>0?'#059669':'#dc2626';
+    const val=isCost?FD(Math.abs(d)):FM(Math.abs(d));
+    return '<span style="color:'+color+';font-size:10px;">6月: '+FM(j)+' '+sign+' '+val+' ('+sign+Math.abs(pct)+'%)</span>';
+  }
+  document.getElementById('v1d').innerHTML=diffStr(k.daily_avg_people, k.jun_daily_avg_people);
+  document.getElementById('v2d').innerHTML=diffStr(k.daily_avg_trips, k.jun_daily_avg_trips);
+  document.getElementById('v3d').innerHTML=diffStr(k.total_hours, k.jun_total_hours);
+  document.getElementById('v4d').innerHTML=diffStr(k.total_cost, k.jun_total_cost, true);
+  document.getElementById('v5d').innerHTML=diffStr(k.total_supplier_count, k.jun_total_supplier_count);
+  document.getElementById('v6d').innerHTML=diffStr(k.a_suppliers, k.jun_a_suppliers);
+  document.getElementById('v7d').innerHTML=diffStr(k.d_suppliers, k.jun_d_suppliers);
+  document.getElementById('v8d').innerHTML=diffStr(k.coi_noncompliant, k.jun_coi_noncompliant);
 }
 
 // Charts
 let c1=null,c2=null;
 function renderCharts(){
-  const d1=D.cost_chart;
+  // 6月数据
+  const d1=D.cost_chart_jun||D.cost_chart;
   const ctx1=document.getElementById('chCost'); if(!ctx1||ctx1.clientWidth===0)return;
   if(c1)c1.destroy(); if(c2)c2.destroy();
   const totalCostAll=d1.reduce((s,x)=>s+x.total_cost,0);
@@ -485,7 +516,7 @@ function renderCharts(){
     scales:{y:{type:'linear',position:'left',grid:{color:'#f3f4f6'},ticks:{callback:v=>'$'+(v/1e6).toFixed(1)+'M',font:{size:9}}},
             y1:{type:'linear',position:'right',grid:{display:false},ticks:{callback:v=>FM(v),font:{size:9}}}}}});
 
-  const d2=D.people_supplier_chart;
+  const d2=D.people_supplier_chart_jun||D.people_supplier_chart;
   c2=new Chart(document.getElementById('chPeople'),{type:'bar',data:{
     labels:d2.map(x=>x.region),
     datasets:[
@@ -496,6 +527,59 @@ function renderCharts(){
     plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:12,usePointStyle:true,pointStyleWidth:8}}},
     scales:{y:{type:'linear',position:'left',grid:{color:'#f3f4f6'},ticks:{font:{size:9}}},
             y1:{type:'linear',position:'right',grid:{display:false},ticks:{callback:v=>FM(v),font:{size:9}}}}}});
+
+  // 5月 vs 6月对比组合图
+  renderCompareCharts();
+}
+
+// 5月vs6月对比组合图
+let cc1=null, cc2=null, cc3=null;
+function renderCompareCharts(){
+  const may=D.cost_chart, jun=D.cost_chart_jun;
+  if(!may||!jun||may.length===0||jun.length===0)return;
+  const labels=may.map(x=>x.region);
+
+  // 成本对比
+  const ctx1=document.getElementById('chCostCompare');
+  if(ctx1&&ctx1.clientWidth>0){
+    if(cc1)cc1.destroy();
+    cc1=new Chart(ctx1,{type:'bar',data:{
+      labels:labels,
+      datasets:[
+        {label:'5月成本',data:may.map(x=>Math.round(x.total_cost)),backgroundColor:'#93c5fd',barPercentage:.7,borderRadius:{topLeft:3,topRight:3}},
+        {label:'6月成本',data:jun.map(x=>Math.round(x.total_cost)),backgroundColor:'#3b82f6',barPercentage:.7,borderRadius:{topLeft:3,topRight:3}}
+      ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'bottom',labels:{font:{size:9},padding:10,usePointStyle:true,pointStyleWidth:8}}},
+      scales:{y:{grid:{color:'#f3f4f6'},ticks:{callback:v=>'$'+(v/1e6).toFixed(1)+'M',font:{size:9}}}}}});
+  }
+
+  // 人数对比
+  const ctx2=document.getElementById('chPeopleCompare');
+  if(ctx2&&ctx2.clientWidth>0){
+    if(cc2)cc2.destroy();
+    cc2=new Chart(ctx2,{type:'bar',data:{
+      labels:labels,
+      datasets:[
+        {label:'5月人数',data:may.map(x=>x.daily_people),backgroundColor:'#93c5fd',barPercentage:.7,borderRadius:{topLeft:3,topRight:3}},
+        {label:'6月人数',data:jun.map(x=>x.daily_people),backgroundColor:'#3b82f6',barPercentage:.7,borderRadius:{topLeft:3,topRight:3}}
+      ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'bottom',labels:{font:{size:9},padding:10,usePointStyle:true,pointStyleWidth:8}}},
+      scales:{y:{grid:{color:'#f3f4f6'},ticks:{font:{size:9}}}}}});
+  }
+
+  // 工时对比
+  const ctx3=document.getElementById('chHoursCompare');
+  if(ctx3&&ctx3.clientWidth>0){
+    if(cc3)cc3.destroy();
+    cc3=new Chart(ctx3,{type:'bar',data:{
+      labels:labels,
+      datasets:[
+        {label:'5月工时',data:may.map(x=>Math.round(x.total_hours)),backgroundColor:'#93c5fd',barPercentage:.7,borderRadius:{topLeft:3,topRight:3}},
+        {label:'6月工时',data:jun.map(x=>Math.round(x.total_hours)),backgroundColor:'#3b82f6',barPercentage:.7,borderRadius:{topLeft:3,topRight:3}}
+      ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'bottom',labels:{font:{size:9},padding:10,usePointStyle:true,pointStyleWidth:8}}},
+      scales:{y:{grid:{color:'#f3f4f6'},ticks:{callback:v=>FM(v),font:{size:9}}}}}});
+  }
 }
 
 // Supplier Table
