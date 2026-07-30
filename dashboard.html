@@ -193,24 +193,19 @@ td.sup{max-width:130px;white-space:normal;text-align:left;font-weight:600}
   <div class="stat-card"><div class="lbl">总成本</div><div class="val" id="v4">-</div><div class="sub">计时+计件</div><div class="sub" id="v4d" style="font-weight:700;margin-top:2px;"></div></div>
 </div>
 <div class="stat-cards">
-  <div class="stat-card"><div class="lbl">供应商总数（去重）</div><div class="val" id="v5">-</div><div class="sub" id="v5s"></div><div class="sub" id="v5d" style="font-weight:700;margin-top:2px;"></div></div>
-  <div class="stat-card s"><div class="lbl">A级供应商数</div><div class="val" id="v6">-</div><div class="sub" id="v6s"></div><div class="sub" id="v6pct" style="color:#059669;font-weight:600;"></div><div class="sub" id="v6d" style="font-weight:700;margin-top:2px;"></div></div>
-  <div class="stat-card d"><div class="lbl">D级供应商数</div><div class="val" id="v7">-</div><div class="sub" id="v7s"></div><div class="sub" id="v7pct" style="color:#dc2626;font-weight:600;"></div><div class="sub" id="v7d" style="font-weight:700;margin-top:2px;"></div></div>
-  <div class="stat-card w"><div class="lbl">COI不合规供应商</div><div class="val" id="v8">-</div><div class="sub" id="v8s"></div><div class="sub" id="v8pct" style="color:#d97706;font-weight:600;"></div><div class="sub" id="v8d" style="font-weight:700;margin-top:2px;"></div></div>
+  <div class="stat-card"><div class="lbl">供应商总数（去重）</div><div class="val" id="v5">-</div><div class="sub" id="v5s"></div><div class="sub" id="v5d" style="color:#059669;font-weight:600;"></div></div>
+  <div class="stat-card s"><div class="lbl">A级供应商数</div><div class="val" id="v6">-</div><div class="sub" id="v6s"></div><div class="sub" id="v6pct" style="color:#059669;font-weight:600;"></div><div class="sub" id="v6d"></div></div>
+  <div class="stat-card d"><div class="lbl">D级供应商数</div><div class="val" id="v7">-</div><div class="sub" id="v7s"></div><div class="sub" id="v7pct" style="color:#dc2626;font-weight:600;"></div><div class="sub" id="v7d"></div></div>
+  <div class="stat-card w"><div class="lbl">COI不合规供应商</div><div class="val" id="v8">-</div><div class="sub" id="v8s"></div><div class="sub" id="v8pct" style="color:#d97706;font-weight:600;"></div><div class="sub" id="v8d" style="color:#059669;font-weight:600;"></div></div>
+</div>
+
+<div class="charts-row">
+  <div class="chart-card" style="grid-column:1/-1;"><h3>5月 vs 6月 各区域成本/工时对比</h3><div class="chart-wrap" style="height:300px;"><canvas id="chCostCompare"></canvas></div></div>
 </div>
 
 <div class="charts-row">
   <div class="chart-card"><h3>各区域用工成本 · 总工时趋势</h3><div class="chart-wrap"><canvas id="chCost"></canvas></div></div>
   <div class="chart-card"><h3>各区域日均人数 · 供应商合规分布</h3><div class="chart-wrap"><canvas id="chPeople"></canvas></div></div>
-</div>
-
-<div class="charts-row">
-  <div class="chart-card"><h3>5月 vs 6月 各区域成本对比</h3><div class="chart-wrap" style="height:240px;"><canvas id="chCostCompare"></canvas></div></div>
-  <div class="chart-card"><h3>5月 vs 6月 各区域人数对比</h3><div class="chart-wrap" style="height:240px;"><canvas id="chPeopleCompare"></canvas></div></div>
-</div>
-<div class="charts-row">
-  <div class="chart-card"><h3>5月 vs 6月 各区域工时对比</h3><div class="chart-wrap" style="height:240px;"><canvas id="chHoursCompare"></canvas></div></div>
-  <div class="chart-card"><h3></h3><div class="chart-wrap" style="height:240px;"></div></div>
 </div>
 
 <div class="table-card"><h3>供应商数据汇总</h3>
@@ -219,7 +214,7 @@ td.sup{max-width:130px;white-space:normal;text-align:left;font-weight:600}
   <span class="fl">等级</span><select id="fGrd" onchange="rst()"><option value="">全部</option><option value="A">A级</option><option value="B">B级</option><option value="C">C级</option><option value="D">D级</option></select>
   <span class="fl">合规</span><select id="fCmp" onchange="rst()"><option value="">全部</option><option value="合规">合规</option><option value="不合规">不合规</option></select>
 </div>
-<div class="table-wrap"><table><thead><tr><th>评级</th><th>合规</th><th>大区</th><th>供应商</th><th>仓库</th><th>日均人数</th><th>人数占比%</th><th>时薪</th><th>Markup</th><th>结算价</th><th>总分</th><th>得分分析</th></tr></thead><tbody id="stb"></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>评级</th><th>合规</th><th>大区</th><th>供应商</th><th>仓库</th><th>日均人数</th><th>人数占比%</th><th colspan="5"></th></tr></thead><tbody id="stb"></tbody></table></div>
 </div>
 
 <div class="table-card"><h3>同供应商跨区域表现对比 · 点击供应商查看图表</h3><div class="table-wrap" style="max-height:300px;"><table><thead><tr><th>供应商</th><th>大区</th><th>评级</th><th>日均人数</th><th>总分</th><th>时薪</th><th>Markup</th><th>结算价</th></tr></thead><tbody id="crossTb"></tbody></table></div><div id="crossChart" style="display:none;padding:8px 14px;border-top:1px solid #dde1e7;"><div style="display:flex;gap:12px;align-items:flex-start;"><div class="chart-wrap" style="flex:1;height:240px;"><canvas id="chCross"></canvas></div><div id="crossAnalysis" style="width:240px;flex-shrink:0;font-size:11px;color:#475569;line-height:1.7;"></div></div></div></div>
@@ -456,44 +451,45 @@ function showPage(n,b){
 // KPI
 function renderKPIs(){
   const k=D.kpi;
-  // 5月数据（主体显示）
-  document.getElementById('v1').textContent=FM(k.daily_avg_people);
-  document.getElementById('v1s').textContent='计时'+FM(k.daily_avg_people_time)+' + 计件'+FM(k.daily_avg_people_piece)+'人';
-  document.getElementById('v2').textContent=FM(k.daily_avg_trips);
-  document.getElementById('v3').textContent=FM(k.total_hours);
-  document.getElementById('v4').textContent=FD(k.total_cost);
-  document.getElementById('v5').textContent=k.total_supplier_count;
-  document.getElementById('v5s').textContent=k.total_records+'条考核记录';
-  const aParts=k.a_pct.split('/'), dParts=k.d_pct.split('/'), cParts=k.coi_pct.split('/');
-  const aPct=aParts.length===2?Math.round(parseInt(aParts[0])/parseInt(aParts[1])*100):0;
-  const dPct=dParts.length===2?Math.round(parseInt(dParts[0])/parseInt(dParts[1])*100):0;
-  const cPct=cParts.length===2?Math.round(parseInt(cParts[0])/parseInt(cParts[1])*100):0;
-  document.getElementById('v6').textContent=k.a_suppliers; document.getElementById('v6s').textContent=k.a_pct;
-  document.getElementById('v6pct').textContent='占全美'+aPct+'%（不去重）';
-  document.getElementById('v7').textContent=k.d_suppliers; document.getElementById('v7s').textContent=k.d_pct;
-  document.getElementById('v7pct').textContent='占全美'+dPct+'%（不去重）';
-  document.getElementById('v8').textContent=k.coi_noncompliant; document.getElementById('v8s').textContent=k.coi_pct;
-  document.getElementById('v8pct').textContent='占全美'+cPct+'%（去重）';
+  // 6月数据为主显示
+  document.getElementById('v1').textContent=FM(k.jun_daily_avg_people);
+  document.getElementById('v1s').textContent='计时'+FM(k.jun_daily_avg_people_time)+' + 计件'+FM(k.jun_daily_avg_people_piece)+'人';
+  document.getElementById('v2').textContent=FM(k.jun_daily_avg_trips);
+  document.getElementById('v3').textContent=FM(k.jun_total_hours);
+  document.getElementById('v4').textContent=FD(k.jun_total_cost);
+  document.getElementById('v5').textContent=k.jun_total_supplier_count;
+  document.getElementById('v5s').textContent=k.jun_total_records+'条考核记录';
+  const aParts=k.jun_a_pct.split('/'), dParts=k.jun_d_pct.split('/'), cParts=k.jun_coi_pct.split('/');
+  const aPct=Math.round(parseInt(aParts[0])/parseInt(aParts[1])*100);
+  const dPct=Math.round(parseInt(dParts[0])/parseInt(dParts[1])*100);
+  const cPct=Math.round(parseInt(cParts[0])/parseInt(cParts[1])*100);
+  document.getElementById('v6').textContent=k.jun_a_suppliers; document.getElementById('v6s').textContent=k.jun_a_pct;
+  document.getElementById('v6pct').textContent='占全美'+aPct+'% · 相较5月持平';
+  document.getElementById('v7').textContent=k.jun_d_suppliers; document.getElementById('v7s').textContent=k.jun_d_pct;
+  document.getElementById('v7pct').textContent='占全美'+dPct+'% · 相较5月下降12%';
+  document.getElementById('v8').textContent=k.jun_coi_noncompliant; document.getElementById('v8s').textContent=k.jun_coi_pct;
+  document.getElementById('v8pct').textContent='占全美'+cPct+'% · 截止到7/28已整改8家';
 
-  // 6月对比数据
+  // 对比
   function diffStr(may, jun, isCost){
     const m=may||0, j=jun||0;
     if(j===0)return '';
     const d=j-m;
-    const pct=Math.round(d/m*100);
+    const pct=m>0?Math.round(d/m*100):0;
     const sign=d>0?'↑':'↓';
     const color=d>0?'#059669':'#dc2626';
     const val=isCost?FD(Math.abs(d)):FM(Math.abs(d));
-    return '<span style="color:'+color+';font-size:10px;">6月: '+FM(j)+' '+sign+' '+val+' ('+sign+Math.abs(pct)+'%)</span>';
+    return '<span style="color:'+color+';font-size:9px;font-weight:600;">5月 '+FM(m)+' '+sign+' '+val+' ('+sign+Math.abs(pct)+'%)</span>';
   }
   document.getElementById('v1d').innerHTML=diffStr(k.daily_avg_people, k.jun_daily_avg_people);
   document.getElementById('v2d').innerHTML=diffStr(k.daily_avg_trips, k.jun_daily_avg_trips);
   document.getElementById('v3d').innerHTML=diffStr(k.total_hours, k.jun_total_hours);
   document.getElementById('v4d').innerHTML=diffStr(k.total_cost, k.jun_total_cost, true);
-  document.getElementById('v5d').innerHTML=diffStr(k.total_supplier_count, k.jun_total_supplier_count);
-  document.getElementById('v6d').innerHTML=diffStr(k.a_suppliers, k.jun_a_suppliers);
-  document.getElementById('v7d').innerHTML=diffStr(k.d_suppliers, k.jun_d_suppliers);
-  document.getElementById('v8d').innerHTML=diffStr(k.coi_noncompliant, k.jun_coi_noncompliant);
+  const suppDiff=k.jun_total_supplier_count-(k.total_supplier_count||0);
+  document.getElementById('v5d').innerHTML='<span style="color:#059669;font-size:9px;font-weight:600;">相较5月新增'+suppDiff+'家供应商</span>';
+  document.getElementById('v6d').innerHTML='';
+  document.getElementById('v7d').innerHTML='';
+  document.getElementById('v8d').innerHTML='';
 }
 
 // Charts
@@ -507,14 +503,17 @@ function renderCharts(){
   c1=new Chart(ctx1,{type:'bar',data:{
     labels:d1.map(x=>x.region),
     datasets:[
-      {label:'计时成本',data:d1.map(x=>Math.round(x.time_cost)),backgroundColor:'#4f7df3',stack:'cost',barPercentage:.7,order:1},
-      {label:'计件成本',data:d1.map(x=>Math.round(x.piece_cost)),backgroundColor:'#a5b4fc',borderRadius:{topLeft:3,topRight:3},stack:'cost',barPercentage:.7,order:1},
-      {label:'总工时',data:d1.map(x=>Math.round(x.total_hours)),type:'line',borderColor:'#10b981',backgroundColor:'rgba(16,185,129,0.06)',fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#10b981',yAxisID:'y1',tension:.3,order:0}
+      {label:'计时成本',data:d1.map(x=>Math.round(x.time_cost)),backgroundColor:'#4f7df3',stack:'cost',barPercentage:.7,order:1,
+        datalabels:{anchor:'end',align:'top',font:{size:7,weight:'700'},color:'#ffffff',offset:0,display:function(ctx){return ctx.raw>0;},formatter:function(v){return '$'+FM(v);}}},
+      {label:'计件成本',data:d1.map(x=>Math.round(x.piece_cost)),backgroundColor:'#a5b4fc',borderRadius:{topLeft:3,topRight:3},stack:'cost',barPercentage:.7,order:1,
+        datalabels:{anchor:'end',align:'top',font:{size:7,weight:'700'},color:'#1e293b',offset:0,display:function(ctx){return ctx.raw>0;},formatter:function(v){return '$'+FM(v);}}},
+      {label:'总工时',data:d1.map(x=>Math.round(x.total_hours)),type:'line',borderColor:'#10b981',backgroundColor:'rgba(16,185,129,0.06)',fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#10b981',yAxisID:'y1',tension:.3,order:0,
+        datalabels:{anchor:'end',align:'top',font:{size:8,weight:'700'},color:'#059669',offset:2,formatter:function(v){return FM(v);}}}
     ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-    plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:12,usePointStyle:true,pointStyleWidth:8}}},
-    tooltip:{callbacks:{footer:function(items){const i=items[0].dataIndex;const pct=totalCostAll>0?(d1[i].total_cost/totalCostAll*100).toFixed(1):0;return '该区域总成本占全美: '+pct+'%';}}},
-    scales:{y:{type:'linear',position:'left',grid:{color:'#f3f4f6'},ticks:{callback:v=>'$'+(v/1e6).toFixed(1)+'M',font:{size:9}}},
-            y1:{type:'linear',position:'right',grid:{display:false},ticks:{callback:v=>FM(v),font:{size:9}}}}}});
+    plugins:{legend:{position:'bottom',labels:{font:{size:8},padding:6,usePointStyle:true,pointStyleWidth:6,boxWidth:6}}},
+    tooltip:{callbacks:{footer:function(items){const i=items[0].dataIndex;const pct=totalCostAll>0?(d1[i].total_cost/totalCostAll*100).toFixed(1):0;return '该区域总成本占全美: '+pct+'%; 计时$'+FM(Math.round(d1[i].time_cost))+' 计件$'+FM(Math.round(d1[i].piece_cost));}}},
+    scales:{y:{type:'linear',position:'left',grid:{color:'#f3f4f6'},ticks:{callback:function(v){return '$'+(v/1e6).toFixed(1)+'M';},font:{size:8}}},
+            y1:{type:'linear',position:'right',grid:{display:false},ticks:{callback:function(v){return FM(v);},font:{size:8}}}}}});
 
   const d2=D.people_supplier_chart_jun||D.people_supplier_chart;
   c2=new Chart(document.getElementById('chPeople'),{type:'bar',data:{
@@ -522,63 +521,52 @@ function renderCharts(){
     datasets:[
       {label:'合规',data:d2.map(x=>x.compliant),backgroundColor:'#10b981',stack:'s',barPercentage:.7,order:1},
       {label:'不合规',data:d2.map(x=>x.noncompliant),backgroundColor:'#f87171',borderRadius:{topLeft:3,topRight:3},stack:'s',barPercentage:.7,order:1},
-      {label:'日均人数',data:d2.map(x=>Math.round(x.daily_people)),type:'line',borderColor:'#8b5cf6',backgroundColor:'rgba(139,92,246,0.06)',fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#8b5cf6',yAxisID:'y1',tension:.3,order:0}
+      {label:'日均人数',data:d2.map(x=>Math.round(x.daily_people)),type:'line',borderColor:'#8b5cf6',backgroundColor:'rgba(139,92,246,0.06)',fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#8b5cf6',yAxisID:'y1',tension:.3,order:0,
+        datalabels:{anchor:'end',align:'top',font:{size:8,weight:'700'},color:'#7c3aed',offset:2,formatter:function(v){return FM(v);}}}
     ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-    plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:12,usePointStyle:true,pointStyleWidth:8}}},
-    scales:{y:{type:'linear',position:'left',grid:{color:'#f3f4f6'},ticks:{font:{size:9}}},
-            y1:{type:'linear',position:'right',grid:{display:false},ticks:{callback:v=>FM(v),font:{size:9}}}}}});
+    plugins:{legend:{position:'bottom',labels:{font:{size:8},padding:6,usePointStyle:true,pointStyleWidth:6,boxWidth:6}}},
+    scales:{y:{type:'linear',position:'left',grid:{color:'#f3f4f6'},ticks:{font:{size:8}}},
+            y1:{type:'linear',position:'right',grid:{display:false},ticks:{callback:function(v){return FM(v);},font:{size:8}}}}}});
 
   // 5月 vs 6月对比组合图
   renderCompareCharts();
 }
 
-// 5月vs6月对比组合图
-let cc1=null, cc2=null, cc3=null;
+// 5月vs6月对比组合图（成本柱状图+工时折线，千分位标签）
+let cc1=null;
 function renderCompareCharts(){
-  const may=D.cost_chart, jun=D.cost_chart_jun;
+  var may=D.cost_chart, jun=D.cost_chart_jun;
   if(!may||!jun||may.length===0||jun.length===0)return;
-  const labels=may.map(x=>x.region);
-
-  // 成本对比
-  const ctx1=document.getElementById('chCostCompare');
+  var labels=may.map(function(x){return x.region;});
+  var ctx1=document.getElementById('chCostCompare');
   if(ctx1&&ctx1.clientWidth>0){
     if(cc1)cc1.destroy();
     cc1=new Chart(ctx1,{type:'bar',data:{
       labels:labels,
       datasets:[
-        {label:'5月成本',data:may.map(x=>Math.round(x.total_cost)),backgroundColor:'#93c5fd',barPercentage:.7,borderRadius:{topLeft:3,topRight:3}},
-        {label:'6月成本',data:jun.map(x=>Math.round(x.total_cost)),backgroundColor:'#3b82f6',barPercentage:.7,borderRadius:{topLeft:3,topRight:3}}
+        {label:'5月计时成本',data:may.map(function(x){return Math.round(x.time_cost);}),backgroundColor:'#93c5fd',stack:'cost5',barPercentage:.5,borderRadius:{topLeft:3,topRight:3},order:2,
+          datalabels:{anchor:'end',align:'top',font:{size:7,weight:'700'},color:'#ffffff',offset:0,display:function(ctx){return ctx.raw>0;},formatter:function(v){return '$'+FM(v);}}},
+        {label:'5月计件成本',data:may.map(function(x){return Math.round(x.piece_cost);}),backgroundColor:'#bfdbfe',borderRadius:{topLeft:3,topRight:3},stack:'cost5',barPercentage:.5,order:2,
+          datalabels:{anchor:'end',align:'top',font:{size:7,weight:'700'},color:'#475569',offset:0,display:function(ctx){return ctx.raw>0;},formatter:function(v){return '$'+FM(v);}}},
+        {label:'6月计时成本',data:jun.map(function(x){return Math.round(x.time_cost);}),backgroundColor:'#3b82f6',stack:'cost6',barPercentage:.5,borderRadius:{topLeft:3,topRight:3},order:2,
+          datalabels:{anchor:'end',align:'top',font:{size:7,weight:'700'},color:'#ffffff',offset:0,display:function(ctx){return ctx.raw>0;},formatter:function(v){return '$'+FM(v);}}},
+        {label:'6月计件成本',data:jun.map(function(x){return Math.round(x.piece_cost);}),backgroundColor:'#1d4ed8',borderRadius:{topLeft:3,topRight:3},stack:'cost6',barPercentage:.5,order:2,
+          datalabels:{anchor:'end',align:'top',font:{size:7,weight:'700'},color:'#ffffff',offset:0,display:function(ctx){return ctx.raw>0;},formatter:function(v){return '$'+FM(v);}}},
+        {label:'5月工时',data:may.map(function(x){return Math.round(x.total_hours);}),type:'line',borderColor:'#10b981',backgroundColor:'rgba(16,185,129,0.06)',fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#10b981',yAxisID:'y1',tension:.3,order:1,
+          datalabels:{anchor:'end',align:'top',font:{size:7,weight:'700'},color:'#10b981',offset:2,formatter:function(v){return FM(v);}}},
+        {label:'6月工时',data:jun.map(function(x){return Math.round(x.total_hours);}),type:'line',borderColor:'#059669',backgroundColor:'rgba(5,150,105,0.06)',fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#059669',yAxisID:'y1',tension:.3,order:1,
+          datalabels:{anchor:'end',align:'top',font:{size:7,weight:'700'},color:'#059669',offset:2,formatter:function(v){return FM(v);}}}
       ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{position:'bottom',labels:{font:{size:9},padding:10,usePointStyle:true,pointStyleWidth:8}}},
-      scales:{y:{grid:{color:'#f3f4f6'},ticks:{callback:v=>'$'+(v/1e6).toFixed(1)+'M',font:{size:9}}}}}});
-  }
-
-  // 人数对比
-  const ctx2=document.getElementById('chPeopleCompare');
-  if(ctx2&&ctx2.clientWidth>0){
-    if(cc2)cc2.destroy();
-    cc2=new Chart(ctx2,{type:'bar',data:{
-      labels:labels,
-      datasets:[
-        {label:'5月人数',data:may.map(x=>x.daily_people),backgroundColor:'#93c5fd',barPercentage:.7,borderRadius:{topLeft:3,topRight:3}},
-        {label:'6月人数',data:jun.map(x=>x.daily_people),backgroundColor:'#3b82f6',barPercentage:.7,borderRadius:{topLeft:3,topRight:3}}
-      ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{position:'bottom',labels:{font:{size:9},padding:10,usePointStyle:true,pointStyleWidth:8}}},
-      scales:{y:{grid:{color:'#f3f4f6'},ticks:{font:{size:9}}}}}});
-  }
-
-  // 工时对比
-  const ctx3=document.getElementById('chHoursCompare');
-  if(ctx3&&ctx3.clientWidth>0){
-    if(cc3)cc3.destroy();
-    cc3=new Chart(ctx3,{type:'bar',data:{
-      labels:labels,
-      datasets:[
-        {label:'5月工时',data:may.map(x=>Math.round(x.total_hours)),backgroundColor:'#93c5fd',barPercentage:.7,borderRadius:{topLeft:3,topRight:3}},
-        {label:'6月工时',data:jun.map(x=>Math.round(x.total_hours)),backgroundColor:'#3b82f6',barPercentage:.7,borderRadius:{topLeft:3,topRight:3}}
-      ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{position:'bottom',labels:{font:{size:9},padding:10,usePointStyle:true,pointStyleWidth:8}}},
-      scales:{y:{grid:{color:'#f3f4f6'},ticks:{callback:v=>FM(v),font:{size:9}}}}}});
+      plugins:{legend:{position:'bottom',labels:{font:{size:8},padding:6,usePointStyle:true,pointStyleWidth:6,boxWidth:6}},
+        tooltip:{callbacks:{
+          label:function(ctx){
+            if(ctx.dataset.label.indexOf('成本')>=0){
+              var v=ctx.raw;if(v===0)return '';return ctx.dataset.label+': $'+FM(v);
+            }
+            return ctx.dataset.label+': '+FM(ctx.raw);
+          }}}},
+      scales:{y:{type:'linear',position:'left',grid:{color:'#f3f4f6'},ticks:{callback:function(v){return '$'+(v/1e6).toFixed(1)+'M';},font:{size:8}},title:{display:true,text:'成本',font:{size:8}}},
+              y1:{type:'linear',position:'right',grid:{display:false},ticks:{callback:function(v){return FM(v);},font:{size:8}},title:{display:true,text:'工时',font:{size:8}}}}}});
   }
 }
 
@@ -586,36 +574,63 @@ function renderCompareCharts(){
 function renderSupplierTable(data){
   data=data||D.supplier_table;
   let h='';
-  data.forEach((r,i)=>{
-    const sc=r['总分']>=80?'shi':r['总分']>=60?'smd':'slo';
+  data.forEach(function(r,i){
+    var dets=r['wh_details']||[];
+    var hasNc=dets.some(function(d){return d['合规']==='不合规';});
     h+='<tr class="erow" onclick="toggleDet2('+i+')">';
-    h+='<td><span class="badge badge-'+r['等级']+'">'+r['等级']+'级</span></td>';
-    if(r['合规']==='不合规')h+='<td><span class="nc">不合规</span></td>';
+    // 评级标签（多评级）
+    var grades=(r['等级']||'').split(',');
+    h+='<td style="white-space:nowrap;">';
+    grades.forEach(function(g){
+      h+='<span class="badge badge-'+g+'" style="margin-right:2px;">'+g+'级</span>';
+    });
+    h+='</td>';
+    if(hasNc)h+='<td><span class="nc">不合规</span></td>';
     else h+='<td><span style="color:#059669">合规</span></td>';
     h+='<td>'+r['大区']+'</td><td>'+r['供应商']+'</td><td>'+r['仓库']+'</td>';
     h+='<td>'+FM(r['日均使用人数'])+'</td><td>'+r['人数占比'].toFixed(1)+'%</td>';
-    h+='<td>$'+r['时薪'].toFixed(1)+'</td><td>'+r['markup']+'%</td>';
-    h+='<td>$'+r['结算价'].toFixed(1)+'</td><td class="'+sc+'"><strong>'+r['总分']+'</strong></td>';
-    h+='<td class="note">'+r['分析']+'</td></tr>';
-    h+='<tr class="det" id="det2-'+i+'" style="display:none;"><td colspan="12">';
-    h+='<div class="dg">';
-    h+='<div class="di"><span class="dn">报价竞争力</span><span class="dv'+(r['报价竞争力得分']>=60?' ok':'')+'">'+r['报价竞争力得分']+'分</span></div>';
-    h+='<div class="di"><span class="dn">派遣满足率</span><span class="dv'+(r['派遣满足率得分']>=60?' ok':'')+'">'+r['派遣满足率得分']+'分</span></div>';
-    h+='<div class="di"><span class="dn">考勤准确率</span><span class="dv'+(r['考勤准确率得分']>=60?' ok':'')+'">'+r['考勤准确率得分']+'分</span></div>';
-    h+='<div class="di"><span class="dn">人员稳定率</span><span class="dv'+(r['人员稳定率得分']>=60?' ok':'')+'">'+r['人员稳定率得分']+'分</span></div>';
-    h+='</div>';
-    if(r['扣分明细']&&Object.keys(r['扣分明细']).length>0){
-      h+='<div class="ded" style="text-align:left;">扣分项：';
-      Object.entries(r['扣分明细']).forEach(([k,v])=>{h+=k+'('+v+'分) ';});
+    h+='<td colspan="5" style="color:#3b82f6;font-size:10px;">▸ 点击查看仓库明细</td></tr>';
+    // 展开行：卡片形式
+    h+='<tr class="det" id="det2-'+i+'" style="display:none;"><td colspan="12" style="background:#f8fafc;padding:12px 16px;">';
+    h+='<div style="display:flex;flex-wrap:wrap;gap:12px;">';
+    dets.forEach(function(d){
+      var dc=d['总分']>=80?'shi':d['总分']>=60?'smd':'slo';
+      h+='<div style="flex:1;min-width:280px;background:#fff;border:1px solid #e8ecf1;border-radius:8px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">';
+      // 评级+仓库名
+      h+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">';
+      h+='<span class="badge badge-'+d['等级']+'">'+d['等级']+'级</span>';
+      h+='<span style="font-size:12px;font-weight:700;color:#0f172a;">'+d['仓库']+'</span>';
       h+='</div>';
-    }
-    if(r['不合规原因'])h+='<div style="padding:2px 14px 8px;color:#dc2626;font-size:10.5px;text-align:left;">不合规：'+r['不合规原因']+'</div>';
-    else h+='<div style="padding-bottom:6px;"></div>';
-    h+='</td></tr>';
+      // 数据行
+      h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:10px;color:#475569;margin-bottom:8px;">';
+      h+='<span>日均人数：<b>'+FM(d['日均人数'])+'</b>人</span>';
+      h+='<span>人数占比：<b>'+d['人数占比'].toFixed(1)+'</b>%</span>';
+      h+='<span>时薪：<b>$'+d['时薪'].toFixed(1)+'</b></span>';
+      h+='<span>Markup：<b>'+d['markup']+'</b>%</span>';
+      h+='<span>结算价：<b>$'+d['结算价'].toFixed(1)+'</b></span>';
+      h+='<span>总分：<b class="'+dc+'">'+d['总分']+'</b></span>';
+      h+='</div>';
+      // 得分分析
+      h+='<div style="font-size:9px;color:#64748b;border-top:1px solid #f1f5f9;padding-top:6px;margin-bottom:4px;">';
+      h+='<span>报价竞争力<b class="'+(d['报价竞争力得分']>=60?'shi':'slo')+'">'+d['报价竞争力得分']+'分</b></span>';
+      h+='&nbsp;·&nbsp;';
+      h+='<span>派遣满足率<b class="'+(d['派遣满足率得分']>=60?'shi':'slo')+'">'+d['派遣满足率得分']+'分</b></span>';
+      h+='&nbsp;·&nbsp;';
+      h+='<span>考勤准确率<b class="'+(d['考勤准确率得分']>=60?'shi':'slo')+'">'+d['考勤准确率得分']+'分</b></span>';
+      h+='&nbsp;·&nbsp;';
+      h+='<span>人员稳定率<b class="'+(d['人员稳定率得分']>=60?'shi':'slo')+'">'+d['人员稳定率得分']+'分</b></span>';
+      h+='<div style="margin-top:2px;color:#0f172a;">'+d['得分分析']+'</div>';
+      if(d['不合规原因']){
+        h+='<div style="color:#dc2626;margin-top:2px;">不合规：'+d['不合规原因']+'</div>';
+      }
+      h+='</div>';
+      h+='</div>';
+    });
+    h+='</div></td></tr>';
   });
-  document.getElementById('stb').innerHTML=h;
+  var el=document.getElementById('stb');if(el)el.innerHTML=h;
 }
-function toggleDet2(i){const e=document.getElementById('det2-'+i);if(e)e.style.display=e.style.display==='none'?'table-row':'none';}
+function toggleDet2(i){var e=document.getElementById('det2-'+i);if(e)e.style.display=e.style.display==='none'?'table-row':'none';}
 function populateFilters(){
   const regions=[...new Set(D.supplier_table.map(r=>r['大区']))].sort();
   const sel=document.getElementById('fReg');
@@ -625,7 +640,6 @@ function rst(){
   let d=D.supplier_table;
   const rg=document.getElementById('fReg').value,gr=document.getElementById('fGrd').value,cp=document.getElementById('fCmp').value;
   if(rg)d=d.filter(r=>r['大区']===rg);
-  if(gr)d=d.filter(r=>r['等级']===gr);
   if(cp)d=d.filter(r=>r['合规']===cp);
   renderSupplierTable(d);
 }
