@@ -43,7 +43,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 
 <script>
 // ─── 缓存破坏 ───
-var LOGIN_VERSION='20260717_1';
+var LOGIN_VERSION='20260730_1';
 var cv=sessionStorage.getItem('login_ver');
 if(cv&&cv!==LOGIN_VERSION){sessionStorage.setItem('login_ver',LOGIN_VERSION);location.reload(true);}
 else{sessionStorage.setItem('login_ver',LOGIN_VERSION);}
@@ -52,9 +52,9 @@ const DEFAULT_USERS=[
   {username:'admin', hash:'00f77eccd9beca098fa138706a28d3837ce3f87d61e90b100535498b2f4b0967', role:'admin', regions:'*', label:'管理员'},
   {username:'fl', hash:'c7b4fe1061d8069cbe5366db76d31738b89c6f7e61099abce6a4c763d8d41100', role:'viewer', regions:'FL 佛州大区', label:'佛州大区'},
   {username:'gl', hash:'aef090467b7be68684d2a583dac8ec24d2350acc63b96516164e98a50edddce8', role:'viewer', regions:'GL 大湖大区', label:'大湖大区'},
-  {username:'ms', hash:'65eae679399c67a88831004c89c5e051477b52e142c7c3b20d36ae77c742a856', role:'viewer', regions:'MS 中南大区', label:'中南大区'},
-  {username:'ne', hash:'7547d999948052cbc4559c61cb5f5c02073ddbb6b29c05499a5ee603d323f79c', role:'viewer', regions:'NE 东北大区', label:'东北大区'},
-  {username:'tx', hash:'2f62f1c7df95c7ee34ba31e3fcc93efa0becd5c9380c7c85bfdcedd2b8f69df9', role:'viewer', regions:'TX 德州大区', label:'德州大区'},
+  {username:'ms', hash:'9a0e35d3c111a69bcd2b0821f6cef237320e1743570fd3298203cd91955b158b', role:'viewer', regions:'MS 中南大区', label:'中南大区'},
+  {username:'ne', hash:'394b7c4b23f5722873e00445072881c4d57c9ae6c1e16d590733c6200da539a8', role:'viewer', regions:'NE 东北大区', label:'东北大区'},
+  {username:'tx', hash:'a4e606e232be1c95c6b98c58e9486dd036be001ee8efd37d156b2a4d4c94a0c3', role:'viewer', regions:'TX 德州大区', label:'德州大区'},
   {username:'we', hash:'570ab72800989abb9bf71bf27a8fb45ee8cbcaed6b07e190071ae4d3d750d230', role:'viewer', regions:'WE 美西大区', label:'美西大区'},
   {username:'ground', hash:'a1943efd5a2e0eace48368e356e683dff08420a0af279d5a25b44c54fbf71834', role:'viewer', regions:'Ground项目部', label:'Ground项目部'},
   {username:'ADMIN', hash:'64e48f3bf07307f751c02213b95e0b5e1e8351597dfbe12bce5cbf115591ce3f', role:'viewer', regions:'FL 佛州大区,GL 大湖大区,MS 中南大区,NE 东北大区,TX 德州大区,WE 美西大区,Ground项目部', label:'全美明细权限'},
