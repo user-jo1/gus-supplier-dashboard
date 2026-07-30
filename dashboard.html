@@ -365,30 +365,58 @@ function doInit(){
 function applyPermissions(){
   const auth=window._auth;
   if(!auth)return;
-  // 设置用户标签
   const userLabel=document.getElementById('userLabel');
   if(userLabel)userLabel.textContent='👤 '+auth.label+' | © 2026 GUS';
 
-  // 管理员显示全部菜单 + 管理入口 + 汇总看板
+  // ── 权限体系 ──
+  // role='admin' → 全部页面 + 账号管理
+  // username='ADMIN' → 只看 汇总看板 + 各区明细(全部大区)
+  // role='viewer' → 只看 各区明细(限指定大区)
+
+  // 1. 先隐藏所有菜单项
+  document.getElementById('navOverview').style.display='none';
+  document.getElementById('navAdminSep').style.display='none';
+  document.getElementById('navAdmin').style.display='none';
+  document.getElementById('navCost').style.display='none';
+  document.getElementById('navCompliance').style.display='none';
+  document.getElementById('navRisk').style.display='none';
+
   if(auth.role==='admin'){
+    // 管理员：完整看板，默认显示汇总看板
     document.getElementById('navOverview').style.display='flex';
     document.getElementById('navAdminSep').style.display='block';
     document.getElementById('navAdmin').style.display='flex';
-    D._filterRegions=null; // 管理员看全部
+    document.getElementById('navCost').style.display='flex';
+    document.getElementById('navCompliance').style.display='flex';
+    document.getElementById('navRisk').style.display='flex';
+    D._filterRegions=null;
+    D._allowedPages=['overview','regions','cost','compliance','risk'];
+    // 切换到汇总看板
+    const ov=document.getElementById('navOverview');
+    if(ov)setTimeout(function(){ov.click();},50);
     return;
   }
 
-  // 普通 viewer：隐藏汇总看板，只显示允许的大区
-  document.getElementById('navOverview').style.display='none';
+  if(auth.username==='ADMIN'){
+    // ADMIN：只看汇总看板 + 各区明细(全部大区)，默认显示汇总看板
+    document.getElementById('navOverview').style.display='flex';
+    D._filterRegions=null;
+    D._allowedPages=['overview','regions'];
+    // 切换到汇总看板
+    const ov=document.getElementById('navOverview');
+    if(ov)setTimeout(function(){ov.click();},50);
+    return;
+  }
+
+  // 普通 viewer：只看各区明细(限指定大区)
   if(auth.regions&&auth.regions!=='*'){
     const allowedRegions=auth.regions.split(',').map(s=>s.trim());
     D._filterRegions=allowedRegions;
-    // 过滤数据
     filterDataByRegions(allowedRegions);
-    // 隐藏跨区域对比和专题分析（只限本区）
-    document.getElementById('navCost').style.display='none';
-    document.getElementById('navCompliance').style.display='none';
-    document.getElementById('navRisk').style.display='none';
+    D._allowedPages=['regions'];
+  }else{
+    D._filterRegions=null;
+    D._allowedPages=['regions'];
   }
 }
 
@@ -438,6 +466,14 @@ function doLogout(){
   window.location.href='login.html';
 }
 function showPage(n,b){
+  // 权限校验：不在允许页面列表中的禁止访问
+  if(D._allowedPages&&D._allowedPages.indexOf(n)===-1){
+    // 跳转到默认页面
+    const defaultPage=D._allowedPages[0]||'regions';
+    const defaultNav=document.querySelector('#navOverview,#navRegions,#navCost,#navCompliance,#navRisk');
+    if(defaultNav)defaultNav.click();
+    return;
+  }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('pg-'+n).classList.add('active');
   document.querySelectorAll('.sidebar a').forEach(a=>a.classList.remove('active'));
