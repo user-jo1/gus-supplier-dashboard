@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>站点劳务供应商管理 · GUS</title>
+<style>
+:root{
+  --bg:#f5f7fb; --card:#fff; --border:#e5e9f2;
+  --text:#1e293b; --muted:#64748b;
+  --blue:#2563eb; --blue-soft:#eff6ff;
+  --red:#ef4444; --red-soft:#fdecec;
+  --green:#10b981; --green-soft:#e6faf3;
+  --amber:#f59e0b; --amber-soft:#fef4e4;
+  --shadow:0 4px 20px rgba(15,23,42,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+::-webkit-scrollbar{height:6px;width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+
+.banner{padding:22px 32px 6px;max-width:1280px;margin:0 auto}
+.banner h1{font-size:26px;font-weight:800;letter-spacing:.5px;background:linear-gradient(135deg,#2563eb,#7c3aed,#0d9488);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-align:left;display:flex;align-items:center;gap:8px}
+
+.main{padding:16px 32px 40px;max-width:1280px;margin:0 auto}
+
+/* ── 状态条 ── */
+.status-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:linear-gradient(135deg,#eff6ff 0%,#f5f3ff 100%);border:1px solid #c7d2fe;border-radius:12px;padding:12px 18px;margin-bottom:16px;box-shadow:var(--shadow);font-size:12.5px;color:#1e3a5f;font-weight:600}
+.status-bar .dot{width:10px;height:10px;border-radius:50%;background:#cbd5e1;flex-shrink:0;transition:background .3s;box-shadow:0 0 6px rgba(100,116,139,.3)}
+.status-bar.saving .dot{background:var(--amber);box-shadow:0 0 6px rgba(245,158,11,.5);animation:pulse 1s infinite}
+.status-bar.saved .dot{background:var(--green);box-shadow:0 0 6px rgba(16,185,129,.5)}
+.status-bar.fail .dot{background:var(--red);box-shadow:0 0 6px rgba(239,68,68,.5)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── 表单 ── */
+.panel{background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden;animation:cardIn .5s ease both}
+@keyframes cardIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.panel-head{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #dbeafe;background:linear-gradient(90deg,#eff6ff 0%,#eef2ff 50%,#ecfeff 100%)}
+.panel-head h2{font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px;color:#1e3a5f}
+.panel-head h2::before{content:'';width:4px;height:16px;border-radius:2px;background:linear-gradient(180deg,#2563eb,#7c3aed);display:inline-block}
+.panel-head .actions{display:flex;gap:8px}
+.btn{padding:7px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid transparent;transition:all .2s}
+.btn:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+.btn-primary{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff}
+.btn-primary:hover{box-shadow:0 4px 12px rgba(37,99,235,.3)}
+.btn-outline{background:#fff;color:#2563eb;border-color:#bfdbfe}
+.btn-outline:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-soft)}
+.btn-danger{background:#fff;color:var(--red);border-color:#fecaca}
+.btn-danger:hover{border-color:var(--red);background:var(--red-soft)}
+.btn-success{background:linear-gradient(135deg,#10b981,#059669);color:#fff}
+
+/* ── 表单网格 ── */
+.form-grid{display:grid;grid-template-columns:48px 1.2fr 1fr 90px;gap:10px;align-items:center;padding:10px 20px;border-bottom:1px solid #eef2f7;transition:background .2s}
+.form-grid:hover{background:#f8faff}
+.form-grid.header{background:linear-gradient(90deg,#1e3a5f 0%,#1e40af 100%);border-bottom:none;font-size:11px;color:#bfdbfe;font-weight:700;letter-spacing:.6px;padding:10px 20px}
+.form-grid .idx{display:flex;align-items:center;justify-content:center;gap:5px;color:#2563eb;font-weight:800;font-size:10.5px}
+.form-grid .idx .no{background:var(--blue-soft);border-radius:6px;padding:2px 6px;min-width:22px;text-align:center}
+.form-grid .idx .mini-del{width:16px;height:16px;line-height:14px;text-align:center;border-radius:50%;border:none;background:transparent;color:#cbd5e1;cursor:pointer;font-size:10px;font-weight:700;padding:0;transition:all .2s}
+.form-grid .idx .mini-del:hover{background:var(--red);color:#fff}
+input[type=text],select,input[type=number]{
+  width:100%;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;color:var(--text);
+  outline:none;transition:border-color .2s,box-shadow .2s;background:#fff;font-family:inherit;
+}
+input[type=text]:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(59,130,246,.12);background:#fbfdff}
+select:focus{border-color:var(--purple,#7c3aed);box-shadow:0 0 0 3px rgba(124,58,237,.12)}
+input[type=number]:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(16,185,129,.12)}
+.add-row-btn{width:100%;padding:12px;border:2px dashed #93c5fd;border-radius:10px;background:linear-gradient(135deg,#eff6ff,#f5f3ff);color:#2563eb;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;margin:14px 20px}
+.add-row-btn:hover{border-color:var(--blue);color:var(--blue);background:linear-gradient(135deg,#dbeafe,#ede9fe);box-shadow:0 2px 8px rgba(37,99,235,.15)}
+
+/* ── 底部操作区 ── */
+.save-bar{display:flex;gap:10px;align-items:center;justify-content:flex-end;padding:16px 20px;background:linear-gradient(90deg,#f8fafc 0%,#eff6ff 100%);border-top:1px solid #dbeafe;flex-wrap:wrap}
+.save-bar .hint{font-size:11.5px;color:#64748b;margin-right:auto}
+
+/* ── 历史保存记录 ── */
+.record-list{padding:0 20px 18px;display:flex;flex-direction:column;gap:8px}
+.record-item{display:flex;align-items:center;gap:12px;padding:10px 14px;background:linear-gradient(135deg,#f8fafc 0%,#eff6ff 100%);border:1px solid #dbeafe;border-left:4px solid #3b82f6;border-radius:10px;font-size:12.5px;transition:all .2s}
+.record-item:hover{box-shadow:0 2px 8px rgba(59,130,246,.15);transform:translateX(2px)}
+.record-item .time{color:#475569;font-size:11px;min-width:150px;font-weight:600}
+.record-item .data{flex:1;color:var(--text);line-height:1.6}
+.record-item .data b{color:#2563eb}
+.record-item .del{color:var(--red);cursor:pointer;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px}
+.record-item .del:hover{background:var(--red-soft)}
+.empty-tip{color:#94a3b8;font-size:12px;padding:14px 20px;text-align:center}
+
+@media (max-width:760px){.form-grid{grid-template-columns:1fr}.form-grid.header{display:none}.save-bar{justify-content:stretch}.save-bar .btn{flex:1}}
+</style>
+</head>
+<body>
+
+<div class="banner">
+  <h1>站点劳务供应商管理</h1>
+</div>
+
+<div class="main">
+
+  <div class="status-bar" id="statusBar">
+    <span class="dot" id="statusDot"></span>
+    <span id="statusText">就绪</span>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>📝 缺口登记表</h2>
+      <div class="actions">
+        <button class="btn btn-outline" onclick="addRow()">＋ 新增一行</button>
+      </div>
+    </div>
+
+    <div class="form-grid header">
+      <div style="text-align:center">#</div>
+      <div>大区</div>
+      <div>需要增加的站点</div>
+      <div>缺少的劳务工数量（人）</div>
+    </div>
+    <div id="rows"></div>
+    <button class="add-row-btn" onclick="addRow()">＋ 点击添加一行记录</button>
+
+    <div class="save-bar">
+      <span class="hint">💾 点击保存后数据将写入服务器 <b>site_data.json</b>，同时备份到浏览器本地</span>
+      <button class="btn btn-success" onclick="saveAll()">💾 保存到服务器</button>
+      <button class="btn btn-primary" onclick="exportCSV()">📄 导出CSV</button>
+      <button class="btn btn-outline" onclick="clearAll()">🗑 清空</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>🕐 已保存记录</h2>
+      <div class="actions"><button class="btn btn-outline" onclick="loadRecords()">🔄 刷新</button></div>
+    </div>
+    <div class="record-list" id="recordList"><div class="empty-tip">暂无保存记录</div></div>
+  </div>
+
+</div>
+
+<script>
+var REGIONS=['FL 佛州大区','GL 大湖大区','MS 中南大区','NE 东北大区','TX 德州大区','WE 美西大区','Ground项目部'];
+var LS_KEY='gus_site_demand_v1';
+var rows=[];
+
+function status(kind,txt){
+  var bar=document.getElementById('statusBar');
+  bar.className='status-bar '+kind;
+  document.getElementById('statusDot').style.background=kind==='saved'?'#10b981':(kind==='fail'?'#ef4444':'#f59e0b');
+  document.getElementById('statusText').textContent=txt;
+}
+
+function initRows(){
+  var saved=localStorage.getItem(LS_KEY);
+  if(saved){try{rows=JSON.parse(saved);}catch(e){rows=[];}}
+  if(!rows.length)rows=[{region:'FL 佛州大区',site:'',count:''}];
+}
+
+function renderRows(){
+  var el=document.getElementById('rows');
+  var h='';
+  rows.forEach(function(r,i){
+    h+='<div class="form-grid">'+
+      '<div class="idx"><span class="no">'+(i+1)+'</span><button class="mini-del" title="删除该行" onclick="delRow('+i+')">✕</button></div>'+
+      '<select onchange="rows['+i+'].region=this.value;autoBackup()">'+
+        REGIONS.map(function(rg){return '<option value="'+rg+'"'+(r.region===rg?' selected':'')+'>'+rg+'</option>';}).join('')+
+      '</select>'+
+      '<input type="text" placeholder="如：LAS2.H / DEN.H" value="'+(r.site||'').replace(/"/g,'&quot;')+'" oninput="rows['+i+'].site=this.value;autoBackup()">'+
+      '<input type="number" min="0" placeholder="0" value="'+(r.count!==''&&r.count!=null?r.count:'')+'" oninput="rows['+i+'].count=this.value;autoBackup()">'+
+      '</div>';
+  });
+  el.innerHTML=h;
+}
+
+function addRow(){rows.push({region:REGIONS[0],site:'',count:''});renderRows();}
+function delRow(i){rows.splice(i,1);if(!rows.length)addRow();renderRows();}
+function autoBackup(){localStorage.setItem(LS_KEY,JSON.stringify(rows));}
+
+function saveAll(){
+  // 校验
+  var filled=rows.filter(function(r){return r.site&&r.site.trim()&&r.count!==''&&r.count!=null&&r.count!=='';});
+  if(!filled.length){status('fail','请至少填写一行完整的记录（站点 + 数量）');return;}
+  var payload={time:new Date().toLocaleString('zh-CN'),rows:filled};
+  status('saving','正在保存到服务器…');
+  fetch('/api/site-save',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  }).then(function(res){
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    return res.json();
+  }).then(function(data){
+    if(data.ok){
+      autoBackup();
+      status('saved','✅ 已保存到服务器 site_data.json（'+payload.time+'），并已备份到浏览器本地');
+      loadRecords();
+    }else{
+      status('fail','❌ 保存失败：'+(data.error||'未知错误'));
+    }
+  }).catch(function(e){
+    // 服务器不支持时，至少本地备份
+    autoBackup();
+    status('fail','⚠️ 未能连接保存接口（'+e.message+'），数据已保存到浏览器本地。请确认使用 python3 server.py 启动服务。');
+    loadRecords();
+  });
+}
+
+function loadRecords(){
+  fetch('/api/site-records').then(function(res){return res.json();}).then(function(data){
+    var list=document.getElementById('recordList');
+    var recs=data.records||[];
+    if(!recs.length){list.innerHTML='<div class="empty-tip">暂无保存记录</div>';return;}
+    list.innerHTML=recs.map(function(r,idx){
+      var cnt=0;
+      r.rows.forEach(function(x){cnt+=Number(x.count)||0;});
+      return '<div class="record-item">'+
+        '<span class="time">'+r.time+'</span>'+
+        '<span class="data">共 <b>'+r.rows.length+'</b> 条，合计缺口 <b>'+cnt+'</b> 人</span>'+
+        '<span class="del" onclick="delRecord('+idx+')">删除</span></div>';
+    }).join('');
+  }).catch(function(){
+    var list=document.getElementById('recordList');
+    list.innerHTML='<div class="empty-tip">本地备份：'+localStorage.getItem(LS_KEY)||''+'</div>';
+  });
+}
+
+function delRecord(idx){
+  if(!confirm('确认删除该条保存记录？'))return;
+  fetch('/api/site-delete',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({idx:idx})
+  }).then(function(res){return res.json();}).then(function(data){
+    if(data.ok)loadRecords();
+    else status('fail','删除失败：'+(data.error||''));
+  }).catch(function(){status('fail','删除失败');});
+}
+
+function exportCSV(){
+  var csv='大区,需要增加的站点,缺少的劳务工数量(人)\n';
+  rows.forEach(function(r){
+    if(r.site&&r.site.trim())csv+='"'+r.region+'","'+r.site+'","'+r.count+'"\n';
+  });
+  var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='站点劳务缺口登记_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function clearAll(){
+  if(!confirm('确认清空全部行？此操作仅清空页面表单，不删除已保存记录。'))return;
+  rows=[{region:REGIONS[0],site:'',count:''}];
+  localStorage.removeItem(LS_KEY);
+  renderRows();
+  status('','已清空表单');
+}
+
+initRows();
+renderRows();
+loadRecords();
+</script>
+</body>
+</html>

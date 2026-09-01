@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>旺季前供应商动员事项 · GUS</title>
+<style>
+:root{
+  --bg:#f5f7fb; --card:#fff; --border:#e5e9f2;
+  --text:#1e293b; --muted:#64748b;
+  --blue:#2563eb; --blue-soft:#eff6ff;
+  --red:#ef4444; --red-soft:#fdecec;
+  --amber:#f59e0b; --amber-soft:#fef4e4;
+  --green:#10b981; --green-soft:#e6faf3;
+  --purple:#7c3aed; --purple-soft:#f3e8ff;
+  --shadow:0 4px 20px rgba(15,23,42,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+::-webkit-scrollbar{height:6px;width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+
+/* ── 页面标题（与其他专题分析一致：渐变字、无框、左对齐） ── */
+.page-title{padding:22px 32px 8px;max-width:1280px;margin:0 auto}
+.page-title h1{font-size:26px;font-weight:800;letter-spacing:.5px;background:linear-gradient(135deg,#2563eb,#7c3aed,#0d9488);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-align:left;display:flex;align-items:center;gap:8px}
+
+/* ── 主容器 ── */
+.main{padding:18px 32px 40px;max-width:1280px;margin:0 auto}
+
+/* ── 区块卡片 ── */
+.section{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 26px;margin-bottom:16px;box-shadow:var(--shadow);position:relative;overflow:hidden;animation:cardIn .5s ease both}
+.section::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:14px 0 0 14px}
+.section.s1::before{background:linear-gradient(180deg,#0d9488,#14b8a6)}    /* 核心目标 - 青 */
+.section.s2::before{background:linear-gradient(180deg,#2563eb,#3b82f6)}    /* 大会形式 - 蓝 */
+.section.s3::before{background:linear-gradient(180deg,#7c3aed,#a855f7)}    /* 执行梯度 - 紫 */
+.section.s4::before{background:linear-gradient(180deg,#10b981,#34d399)}    /* 成本核算 - 绿 */
+.section.s5::before{background:linear-gradient(180deg,#f59e0b,#fbbf24)}    /* 分工与节奏 - 橙 */
+
+.sec-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px dashed var(--border)}
+.sec-head .num{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:13px;flex-shrink:0}
+.section.s1 .num{background:linear-gradient(135deg,#0d9488,#14b8a6)}
+.section.s2 .num{background:linear-gradient(135deg,#2563eb,#3b82f6)}
+.section.s3 .num{background:linear-gradient(135deg,#7c3aed,#a855f7)}
+.section.s4 .num{background:linear-gradient(135deg,#10b981,#34d399)}
+.section.s5 .num{background:linear-gradient(135deg,#f59e0b,#fbbf24)}
+.sec-head h2{font-size:18px;font-weight:800;color:var(--text)}
+
+@keyframes cardIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── 核心目标 ── */
+.goal-box{background:linear-gradient(135deg,#f0fdf4 0%,#ecfdf5 100%);border:1px solid #a7f3d0;border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:12px;font-size:14px;color:#065f46;line-height:1.7;font-weight:500}
+.goal-box::before{content:'🎯';font-size:22px;flex-shrink:0}
+
+/* ── 大会形式 3列 ── */
+.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.form-card{border:1px solid var(--border);border-radius:12px;padding:16px 18px;text-align:center;background:#fafbfc;transition:all .25s}
+.form-card:hover{transform:translateY(-3px);box-shadow:var(--shadow);background:#fff}
+.form-card .ic{font-size:28px;margin-bottom:8px}
+.form-card h4{font-size:14px;font-weight:700;margin-bottom:6px;color:var(--text)}
+.form-card p{font-size:11.5px;color:var(--muted);line-height:1.6}
+
+/* ── 执行梯度 2列 ── */
+.tier-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.tier-card{border:1.5px solid;border-radius:12px;padding:16px 18px;position:relative;overflow:hidden}
+.tier-card.t1{border-color:#a855f7;background:linear-gradient(135deg,#faf5ff 0%,#f3e8ff 100%)}
+.tier-card.t2{border-color:#cbd5e1;background:linear-gradient(135deg,#f8fafc 0%,#f1f5f9 100%)}
+.tier-card .pill{display:inline-block;padding:2px 10px;border-radius:12px;font-size:10px;font-weight:700;margin-bottom:10px}
+.tier-card.t1 .pill{background:#7c3aed;color:#fff}
+.tier-card.t2 .pill{background:#64748b;color:#fff}
+.tier-card .name{font-size:15px;font-weight:800;color:var(--text);margin-bottom:6px}
+.tier-card .rule{font-size:12.5px;font-weight:700;color:#7c3aed;margin-bottom:8px}
+.tier-card.t2 .rule{color:#475569}
+.tier-card .desc{font-size:11.5px;color:var(--muted);line-height:1.65}
+
+/* ── 成本规则（各大区填写表） ── */
+.cost-intro{display:flex;flex-direction:column;gap:6px;padding:12px 16px;background:linear-gradient(135deg,#f0fdf4 0%,#ecfdf5 100%);border:1px solid #a7f3d0;border-radius:10px;margin-bottom:14px}
+.cost-intro-title{font-size:14px;font-weight:700;color:#065f46}
+.cost-intro-title b{font-size:16px;color:#059669}
+.cost-intro-desc{font-size:12px;color:#047857;line-height:1.6}
+.cost-region-grid{display:flex;flex-direction:column;gap:8px}
+.cost-region{display:grid;grid-template-columns:170px 1fr 130px;gap:12px;align-items:center;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:10px;transition:all .2s}
+.cost-region:hover{border-color:#6ee7b7;box-shadow:0 2px 8px rgba(16,185,129,.1)}
+.cost-region .cr-name{font-size:13px;font-weight:800;color:#065f46}
+.cost-region .cr-wh{font-size:11px;color:var(--muted);line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cost-region .cr-ratio{display:flex;align-items:center;gap:6px}
+.cost-region input[type=text]{width:100%;padding:7px 10px;border:1.5px dashed #34d399;border-radius:8px;font-size:12px;color:#065f46;background:#f0fdf4;outline:none;font-family:inherit;text-align:center;font-weight:600}
+.cost-region input[type=text]:focus{border-color:#059669;box-shadow:0 0 0 3px rgba(16,185,129,.12);background:#fff}
+.cost-save-bar{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:14px}
+.cost-save-bar .cost-hint{font-size:11.5px;color:#94a3b8;margin-right:auto}
+.cost-status{display:none;margin-top:10px;padding:10px 14px;border-radius:8px;font-size:12.5px;font-weight:600}
+.cost-status.saved{display:block;background:var(--green-soft);color:#059669;border:1px solid #a7f3d0}
+.cost-status.fail{display:block;background:var(--red-soft);color:var(--red);border:1px solid #fecaca}
+@media(max-width:760px){.cost-region{grid-template-columns:1fr}.cost-region .cr-wh{white-space:normal}}
+
+/* ── 分工与节奏（框架表格） ── */
+.flow-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.flow-card{border:1.5px solid;border-radius:12px;padding:18px;background:#fff}
+.flow-card.bp{border-color:#fbcfe8;background:linear-gradient(135deg,#fdf2f8 0%,#fce7f3 100%)}
+.flow-card.reg{border-color:#a5f3fc;background:linear-gradient(135deg,#ecfeff 0%,#cffafe 100%)}
+.flow-card .role{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:14px;font-weight:800}
+.flow-card.bp .role{color:#9d174d}
+.flow-card.reg .role{color:#0e7490}
+.flow-card .role .ic{font-size:20px}
+.flow-list{display:flex;flex-direction:column;gap:6px}
+.flow-list .fl-item{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:#334155;line-height:1.7}
+.flow-list .fl-item::before{content:'①';color:#ec4899;font-size:9px;font-weight:700;margin-top:4px;flex-shrink:0}
+.flow-card.reg .flow-list .fl-item::before{content:'①';color:#06b6d4}
+
+.flow-note{margin-top:12px;padding:10px 14px;background:#f8fafc;border:1px dashed var(--border);border-radius:8px;font-size:11.5px;color:var(--muted);line-height:1.7}
+
+@media (max-width:900px){
+  .form-grid,.cost-grid,.flow-grid{grid-template-columns:1fr}
+  .tier-grid{grid-template-columns:1fr}
+}
+
+/* ── Footer ── */
+.footer{text-align:center;color:var(--muted);font-size:11.5px;padding:16px 0 30px;letter-spacing:.5px}
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  <h1>旺季前供应商动员事项</h1>
+</div>
+
+<div class="main">
+
+  <!-- ① 核心目标 -->
+  <div class="section s1">
+    <div class="sec-head"><div class="num">1</div><h2>核心目标</h2></div>
+    <div class="goal-box">
+      保障黑五、圣诞等旺季节点劳务工的定额、高质量出勤，确保旺季运营人力稳定、供给充足。
+    </div>
+  </div>
+
+  <!-- ② 大会形式 -->
+  <div class="section s2">
+    <div class="sec-head"><div class="num">2</div><h2>大会形式</h2></div>
+    <div class="form-grid">
+      <div class="form-card">
+        <div class="ic">🏆</div>
+        <h4>表扬</h4>
+        <p>表彰优秀供应商/突出贡献劳务工，树立标杆</p>
+      </div>
+      <div class="form-card">
+        <div class="ic">💡</div>
+        <h4>分享</h4>
+        <p>优秀案例经验分享，形成示范与带动效应</p>
+      </div>
+      <div class="form-card">
+        <div class="ic">🎁</div>
+        <h4>激励</h4>
+        <p>设置激励环节，直接拉动旺季出勤与积极性</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 执行梯度规则 -->
+  <div class="section s3">
+    <div class="sec-head"><div class="num">3</div><h2>执行梯度规则</h2></div>
+    <div class="tier-grid">
+      <div class="tier-card t1">
+        <span class="pill">日均操作量 ≥ 100 万单</span>
+        <div class="name">到场抽奖 + 全勤奖</div>
+        <div class="rule">「到场抽奖 + 全勤奖」组合激励</div>
+        <div class="desc">大型仓库单量集中、劳务规模大，采用组合激励同时拉动到场率与全勤率，保证旺季出勤稳定。</div>
+      </div>
+      <div class="tier-card t2">
+        <span class="pill">日均操作量 &lt; 100 万单</span>
+        <div class="name">仅设置全勤奖</div>
+        <div class="rule">仅设置全勤奖</div>
+        <div class="desc">激励口径更简单，聚焦出勤质量、控制执行成本；不设到场抽奖环节。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ 激励成本核算规则 -->
+  <div class="section s4">
+    <div class="sec-head"><div class="num">4</div><h2>激励成本核算规则</h2></div>
+    <div class="cost-intro">
+      <div class="cost-intro-title">计提比例：<b>0.5% ~ 1%</b></div>
+      <div class="cost-intro-desc">例如：按供应商劳务发放总额的 0.8% 计提全勤奖。具体比例待现场与业务沟通后填写。</div>
+    </div>
+    <div id="costRegionGrid" class="cost-region-grid"></div>
+    <div class="cost-save-bar">
+      <span class="cost-hint">填写完成后点击保存，数据将写入服务器与浏览器本地</span>
+      <button class="btn btn-success" onclick="saveCost()">💾 保存</button>
+    </div>
+    <div class="cost-status" id="costStatus"></div>
+  </div>
+
+  <!-- ⑤ 分工与节奏（框架） -->
+  <div class="section s5">
+    <div class="sec-head"><div class="num">5</div><h2>分工与节奏</h2></div>
+    <div class="flow-grid">
+      <div class="flow-card bp">
+        <div class="role"><span class="ic">🧭</span>BP 组（牵头）</div>
+        <div class="flow-list">
+          <div class="fl-item">组织牵头召开供应商动员大会，明确大会议程与分工</div>
+          <div class="fl-item">确认各仓库适用的激励形式（≥100万单组合激励 / &lt;100万单仅全勤奖）</div>
+          <div class="fl-item">与各区域确认是否参与本次激励及参与范围</div>
+          <div class="fl-item">跟进激励落地后的出勤成果，月度复盘并沉淀经验</div>
+        </div>
+      </div>
+      <div class="flow-card reg">
+        <div class="role"><span class="ic">🏬</span>各区域（执行）</div>
+        <div class="flow-list">
+          <div class="fl-item">配合执行动员大会及大会前的供应商沟通</div>
+          <div class="fl-item">确认本区仓库成本口径与成本归属</div>
+          <div class="fl-item">跟进到岗出勤与缺口，及时反馈异常</div>
+        </div>
+      </div>
+    </div>
+    <div class="flow-note">⏱️ 节奏：旺季前 T-4 周 BP 牵头完成方案与动员大会 → T-2 周各区域确认激励形式与成本口径 → 旺季每周跟踪出勤与缺口，异常当日反馈。其余细节（时间、名额、名单）由区域和 BP 确认后补充。</div>
+  </div>
+
+</div>
+
+<div class="footer">旺季前供应商动员事项 · 美洲支持 BP 组</div>
+
+<script>
+// ── 激励成本核算：各大区填写并现场保存 ──
+var COST_REGIONS=[
+  {region:'FL 佛州大区', wh:'MCO.H、MIA.H'},
+  {region:'GL 大湖大区', wh:'CLE.H、CVG.H、ORD.H'},
+  {region:'Ground项目部', wh:'ATL.G、EWR.G、ONT.G、ORD.G、SAV.G、SFO.G'},
+  {region:'MS 中南大区', wh:'ATL.H、CLT.H、PDK.H'},
+  {region:'NE 东北大区', wh:'BWI.H、EWR.H、JFK.H、PHL.H'},
+  {region:'TX 德州大区', wh:'DFW.H、IAH.H'},
+  {region:'WE 美西大区', wh:'CNO.H、DEN.H、LAV.H、PHX.H、SEA.H、SFO.H、SLC.H'}
+];
+var COST_LS='gus_mobilize_cost_v1';
+
+function loadCost(){
+  var saved=localStorage.getItem(COST_LS);
+  var ratios={};
+  if(saved){try{ratios=JSON.parse(saved);}catch(e){ratios={};}}
+  var grid=document.getElementById('costRegionGrid');
+  if(!grid)return;
+  grid.innerHTML=COST_REGIONS.map(function(c){
+    var val=ratios[c.region]||'';
+    return '<div class="cost-region">'+
+      '<div class="cr-name">'+c.region+'</div>'+
+      '<div class="cr-wh">'+c.wh+'</div>'+
+      '<div class="cr-ratio"><input type="text" placeholder="如 0.8%" value="'+val+'" data-reg="'+c.region+'"></div>'+
+      '</div>';
+  }).join('');
+  grid.querySelectorAll('input[type=text]').forEach(function(inp){
+    inp.addEventListener('input',function(){autoBackupCost(inp,inp.getAttribute('data-reg'));});
+  });
+}
+
+function collectCost(){
+  var out={};
+  document.querySelectorAll('#costRegionGrid input[type=text]').forEach(function(inp){
+    var r=inp.getAttribute('data-reg');
+    if(r)out[r]=inp.value.trim();
+  });
+  return out;
+}
+
+function autoBackupCost(inp,region){
+  if(!region)return;
+  var all=collectCost();
+  localStorage.setItem(COST_LS,JSON.stringify(all));
+}
+
+function saveCost(){
+  var ratios=collectCost();
+  localStorage.setItem(COST_LS,JSON.stringify(ratios));
+  var status=document.getElementById('costStatus');
+  status.className='cost-status saved';
+  status.textContent='✅ 已保存到浏览器本地（'+new Date().toLocaleString('zh-CN')+'）';
+  // 尝试保存到服务器
+  fetch('/api/mobilize-save',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({time:new Date().toLocaleString('zh-CN'),ratios:ratios})
+  }).then(function(res){return res.json();}).then(function(data){
+    if(data.ok){status.textContent='✅ 已保存到服务器 mobilize_data.json 与浏览器本地（'+data.time+'）';}
+    else{status.textContent='⚠️ 服务器保存失败（'+data.error+'），已保存到浏览器本地';status.className='cost-status fail';}
+  }).catch(function(){
+    status.textContent='⚠️ 服务器不可达，已保存到浏览器本地（请用 python3 server.py 启动以同步到服务器）';
+    status.className='cost-status fail';
+  });
+  setTimeout(function(){if(status.className.indexOf('saved')>-1){}},6000);
+}
+
+loadCost();
+</script>
+
+</body>
+</html>
