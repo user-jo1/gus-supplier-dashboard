@@ -245,10 +245,12 @@ tr.wh-group td.action-cell{font-size:12px;line-height:1.5}
 
   <!-- 双档合并柱状图（550 + 660 同图） -->
   <div class="charts stack">
-    <div class="chart-box"><h3>📊 各仓库人力缺口对比（550w vs 660w下单量）</h3>
+    <div class="chart-box"><h3>📊 各仓库日均人力缺口对比</h3>
+      <div class="tabs" id="gapTabs"><button class="tab on" onclick="setChartTier('gap','all',this)">全部</button><button class="tab" onclick="setChartTier('gap','550',this)">550w</button><button class="tab" onclick="setChartTier('gap','660',this)">660w</button></div>
       <div class="chart-wrap" style="position:relative"><canvas id="cGap"></canvas><div id="cGapLabels" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></div></div>
     </div>
-    <div class="chart-box"><h3>📦 各仓库日均操作量对比（7月 / 550w / 660w 下单量）</h3>
+    <div class="chart-box"><h3>📦 各仓库日均操作量对比</h3>
+      <div class="tabs" id="volTabs"><button class="tab on" onclick="setChartTier('vol','all',this)">全部</button><button class="tab" onclick="setChartTier('vol','550',this)">550w</button><button class="tab" onclick="setChartTier('vol','660',this)">660w</button></div>
       <div class="chart-wrap" style="position:relative"><canvas id="cVol"></canvas><div id="cVolLabels" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></div></div>
     </div>
   </div>
@@ -4444,12 +4446,21 @@ function charts(){
   var g550Gap=grad(cv,'rgba(251,113,133,.9)','rgba(244,63,94,.75)');    // 550缺口：玫红
   var g660Gap=grad(cv,'rgba(251,191,36,.9)','rgba(245,158,11,.75)');    // 660缺口：琥珀橙
 
-  var chartInst=new Chart(cv,{type:'bar',data:{labels:lbs,datasets:[
-    {label:'550w · 7月实际使用',data:ws550.map(function(w){return w['7月在岗人数'];}),backgroundColor:g550In,borderColor:'rgba(14,165,233,.4)',borderWidth:1,borderRadius:4,stack:'550',barPercentage:.85,categoryPercentage:.88},
-    {label:'550w · 人力缺口',data:ws550.map(function(w){return Math.max(0,w['人力缺口']);}),backgroundColor:g550Gap,borderColor:'rgba(244,63,94,.5)',borderWidth:1,borderRadius:5,stack:'550',barPercentage:.85,categoryPercentage:.88},
-    {label:'660w · 7月实际使用',data:ws660.map(function(w){return w['7月在岗人数'];}),backgroundColor:g660In,borderColor:'rgba(168,85,247,.35)',borderWidth:1,borderRadius:4,stack:'660',barPercentage:.85,categoryPercentage:.88},
-    {label:'660w · 人力缺口',data:ws660.map(function(w){return Math.max(0,w['人力缺口']);}),backgroundColor:g660Gap,borderColor:'rgba(245,158,11,.5)',borderWidth:1,borderRadius:5,stack:'660',barPercentage:.85,categoryPercentage:.88}
-  ]},options:{
+  // 根据档位切换选择显示的数据集（7月实际日均使用在550/660下相同，只用一个颜色）
+  var tier=chartTier.gap||'all';
+  var datasets=[];
+  // 7月实际日均使用：统一用一个颜色（青绿，两个档位共用）
+  var gUse=grad(cv,'rgba(16,185,129,.85)','rgba(20,184,166,.7)');
+  if(tier==='all'||tier==='550'){
+    datasets.push({label:'550w · 7月实际日均使用',data:ws550.map(function(w){return w['7月在岗人数'];}),backgroundColor:gUse,borderColor:'rgba(16,185,129,.4)',borderWidth:1,borderRadius:4,stack:'550',barPercentage:.85,categoryPercentage:.88});
+    datasets.push({label:'550w · 日均人力缺口',data:ws550.map(function(w){return Math.max(0,w['人力缺口']);}),backgroundColor:g550Gap,borderColor:'rgba(244,63,94,.5)',borderWidth:1,borderRadius:5,stack:'550',barPercentage:.85,categoryPercentage:.88});
+  }
+  if(tier==='all'||tier==='660'){
+    datasets.push({label:'660w · 7月实际日均使用',data:ws660.map(function(w){return w['7月在岗人数'];}),backgroundColor:gUse,borderColor:'rgba(16,185,129,.4)',borderWidth:1,borderRadius:4,stack:'660',barPercentage:.85,categoryPercentage:.88});
+    datasets.push({label:'660w · 日均人力缺口',data:ws660.map(function(w){return Math.max(0,w['人力缺口']);}),backgroundColor:g660Gap,borderColor:'rgba(245,158,11,.5)',borderWidth:1,borderRadius:5,stack:'660',barPercentage:.85,categoryPercentage:.88});
+  }
+
+  var chartInst=new Chart(cv,{type:'bar',data:{labels:lbs,datasets:datasets},options:{
     responsive:true,maintainAspectRatio:false,
     animation:{
       duration:1600,
@@ -4474,18 +4485,22 @@ function charts(){
     }
   }});
 
-  // ── HTML 标签层：在每根堆积柱顶部标注总人数 ──
+  // ── HTML 标签层：根据档位显示对应档位的数据标签 ──
   var labelLayer=document.getElementById('cGapLabels');
   function updateLabels(){
     var ca=chartInst.chartArea;
     var yScale=chartInst.scales.y;
-    var meta0=chartInst.getDatasetMeta(0); // 550 实际使用
-    var meta1=chartInst.getDatasetMeta(1); // 550 缺口
-    var meta2=chartInst.getDatasetMeta(2); // 660 实际使用
-    var meta3=chartInst.getDatasetMeta(3); // 660 缺口
-    if(!ca||!yScale||!meta0.data.length||!meta2.data.length){setTimeout(updateLabels,100);return;}
+    if(!ca||!yScale||!chartInst.getDatasetMeta(0).data.length){setTimeout(updateLabels,100);return;}
     var cw=chartInst.width, ch=chartInst.height;
     if(!cw||!ch){setTimeout(updateLabels,100);return;}
+    // 定位各数据集索引（按档位）
+    var idxUse550=-1, idxGap550=-1, idxUse660=-1, idxGap660=-1;
+    chartInst.data.datasets.forEach(function(ds,i){
+      if(ds.label.indexOf('550')>-1 && ds.label.indexOf('缺口')>-1)idxGap550=i;
+      else if(ds.label.indexOf('550')>-1)idxUse550=i;
+      else if(ds.label.indexOf('660')>-1 && ds.label.indexOf('缺口')>-1)idxGap660=i;
+      else if(ds.label.indexOf('660')>-1)idxUse660=i;
+    });
     function embedTag(x,yTop,yBot,text,bg){
       var cy=(yTop+yBot)/2;
       return '<div style="position:absolute;left:'+(x/cw*100).toFixed(2)+'%;top:'+(cy/ch*100).toFixed(2)+'%;transform:translate(-50%,-50%);background:'+bg+';color:#fff;font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;line-height:1.2;white-space:nowrap">'+text+'</div>';
@@ -4496,6 +4511,8 @@ function charts(){
     var yZero=yScale.getPixelForValue(0);
     var html='';
     var isAll=(whRegionFilter==='all');
+    var tier=chartTier.gap||'all';
+    var show550=(tier==='all'||tier==='550'), show660=(tier==='all'||tier==='660');
     chartInst.data.labels.forEach(function(label, idx){
       var d550=ws550[idx], d660=ws660[idx];
       var use550=Number(d550['7月在岗人数'])||0, dem550=Number(d550['需求人数'])||0;
@@ -4503,16 +4520,17 @@ function charts(){
       var gap550=Math.max(0,dem550-use550), gap660=Math.max(0,dem660-use660);
       var yUse550=yScale.getPixelForValue(use550), yDem550=yScale.getPixelForValue(dem550);
       var yUse660=yScale.getPixelForValue(use660), yDem660=yScale.getPixelForValue(dem660);
-      var x550=meta0.data[idx].x, x660=meta2.data[idx].x;
-      // 汇总（需求人数）：悬浮柱顶最上方
-      if(dem550>0) html+=topTag(x550,yDem550,dem550,'#1d4ed8');
-      if(dem660>0) html+=topTag(x660,yDem660,dem660,'#6d28d9');
+      var x550=idxUse550>-1?chartInst.getDatasetMeta(idxUse550).data[idx].x:0;
+      var x660=idxUse660>-1?chartInst.getDatasetMeta(idxUse660).data[idx].x:0;
+      // 汇总（需求人数）：悬浮柱顶最上方（按档位显示）
+      if(show550&&dem550>0) html+=topTag(x550,yDem550,dem550,'#1d4ed8');
+      if(show660&&dem660>0) html+=topTag(x660,yDem660,dem660,'#6d28d9');
       // 全部大区时只显示汇总数据，实际/缺口通过悬浮框查看；单个大区内嵌显示
       if(!isAll){
-        if(use550>0) html+=embedTag(x550,yUse550,yZero,use550,'rgba(29,78,216,.92)');
-        if(gap550>0) html+=embedTag(x550,yDem550,yUse550,'+'+gap550,'rgba(244,63,94,.9)');
-        if(use660>0) html+=embedTag(x660,yUse660,yZero,use660,'rgba(109,40,217,.92)');
-        if(gap660>0) html+=embedTag(x660,yDem660,yUse660,'+'+gap660,'rgba(245,158,11,.9)');
+        if(show550&&use550>0) html+=embedTag(x550,yUse550,yZero,use550,'rgba(29,78,216,.92)');
+        if(show550&&gap550>0) html+=embedTag(x550,yDem550,yUse550,'+'+gap550,'rgba(244,63,94,.9)');
+        if(show660&&use660>0) html+=embedTag(x660,yUse660,yZero,use660,'rgba(109,40,217,.92)');
+        if(show660&&gap660>0) html+=embedTag(x660,yDem660,yUse660,'+'+gap660,'rgba(245,158,11,.9)');
       }
     });
     labelLayer.innerHTML=html;
@@ -4542,11 +4560,20 @@ function chartsVol(){
 
   var fmtVol=function(v){return v>=10000?Math.round(v/1000)/10+'万':Math.round(v)+'';};
 
-  var chartInst=new Chart(cv,{type:'bar',data:{labels:lbs,datasets:[
-    {label:'7月实际',data:ws550.map(function(w){return w['7月日均操作量'];}),backgroundColor:g7,borderColor:'rgba(16,185,129,.4)',borderWidth:1,borderRadius:4,barPercentage:.85,categoryPercentage:.88},
-    {label:'550w下单量',data:ws550.map(function(w){return w['操作单量'];}),backgroundColor:g550,borderColor:'rgba(14,165,233,.4)',borderWidth:1,borderRadius:4,barPercentage:.85,categoryPercentage:.88},
-    {label:'660w下单量',data:ws660.map(function(w){return w['操作单量'];}),backgroundColor:g660,borderColor:'rgba(168,85,247,.35)',borderWidth:1,borderRadius:4,barPercentage:.85,categoryPercentage:.88}
-  ]},options:{
+  // 根据档位切换选择显示的数据集
+  var tier=chartTier.vol||'all';
+  var datasets=[];
+  // 7月实际日均操作量：统一青绿色（两个档位共用）
+  if(tier==='all'||tier==='550'){
+    datasets.push({label:'7月实际日均操作量',data:ws550.map(function(w){return w['7月日均操作量'];}),backgroundColor:g7,borderColor:'rgba(16,185,129,.4)',borderWidth:1,borderRadius:4,barPercentage:.85,categoryPercentage:.88});
+    datasets.push({label:'550w · 日均操作量',data:ws550.map(function(w){return w['操作单量'];}),backgroundColor:g550,borderColor:'rgba(14,165,233,.4)',borderWidth:1,borderRadius:4,barPercentage:.85,categoryPercentage:.88});
+  }
+  if(tier==='all'||tier==='660'){
+    datasets.push({label:'7月实际日均操作量',data:ws660.map(function(w){return w['7月日均操作量'];}),backgroundColor:g7,borderColor:'rgba(16,185,129,.4)',borderWidth:1,borderRadius:4,barPercentage:.85,categoryPercentage:.88});
+    datasets.push({label:'660w · 日均操作量',data:ws660.map(function(w){return w['操作单量'];}),backgroundColor:g660,borderColor:'rgba(168,85,247,.35)',borderWidth:1,borderRadius:4,barPercentage:.85,categoryPercentage:.88});
+  }
+
+  var chartInst=new Chart(cv,{type:'bar',data:{labels:lbs,datasets:datasets},options:{
     responsive:true,maintainAspectRatio:false,
     animation:{duration:1600,easing:'easeOutCubic',delay:function(ctx){return ctx.dataIndex*40;}},
     transitions:{active:{animation:{duration:300}}},
@@ -4565,27 +4592,26 @@ function chartsVol(){
     }
   }});
 
-  // ── HTML 标签层：汇总数据（7月/550w/660w 下单量）悬浮柱顶最上方 ──
+  // ── HTML 标签层：汇总数据悬浮柱顶最上方，按档位显示对应标签 ──
   var labelLayer=document.getElementById('cVolLabels');
   function updateVolLabels(){
     var ca=chartInst.chartArea;
     var yScale=chartInst.scales.y;
-    var meta0=chartInst.getDatasetMeta(0);
-    if(!ca||!yScale||!meta0.data.length){setTimeout(updateVolLabels,100);return;}
+    if(!ca||!yScale||!chartInst.getDatasetMeta(0).data.length){setTimeout(updateVolLabels,100);return;}
     var cw=chartInst.width, ch=chartInst.height;
     if(!cw||!ch){setTimeout(updateVolLabels,100);return;}
     var html='';
     var colors=['#059669','#0e7490','#6d28d9'];
-    ['dataset 0','dataset 1','dataset 2'].forEach(function(_,di){
+    chartInst.data.datasets.forEach(function(ds,di){
       var meta=chartInst.getDatasetMeta(di);
       chartInst.data.labels.forEach(function(label,idx){
-        var v=chartInst.data.datasets[di].data[idx];
+        var v=ds.data[idx];
         if(!v)return;
         var y=yScale.getPixelForValue(v);
         var x=meta.data[idx].x;
         var left=(x/cw*100).toFixed(2);
         var top=((y-6)/ch*100).toFixed(2);
-        html+='<div style="position:absolute;left:'+left+'%;top:'+top+'%;transform:translate(-50%,-100%);background:rgba(255,255,255,.95);border:1.5px solid '+colors[di]+';color:'+colors[di]+';font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;line-height:1.2;white-space:nowrap">'+fmtVol(v)+'</div>';
+        html+='<div style="position:absolute;left:'+left+'%;top:'+top+'%;transform:translate(-50%,-100%);background:rgba(255,255,255,.95);border:1.5px solid '+colors[di%3]+';color:'+colors[di%3]+';font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;line-height:1.2;white-space:nowrap">'+fmtVol(v)+'</div>';
       });
     });
     labelLayer.innerHTML=html;
@@ -4593,6 +4619,16 @@ function chartsVol(){
   updateVolLabels();
   chartInst.options.animation.onComplete=updateVolLabels;
   chartInst.resize(updateVolLabels);
+}
+
+// ── 柱状图档位切换（全部 / 550w / 660w）──
+var chartTier={gap:'all',vol:'all'};
+function setChartTier(chart,tier,btn){
+  chartTier[chart]=tier;
+  var tabsId=chart==='gap'?'gapTabs':'volTabs';
+  document.querySelectorAll('#'+tabsId+' .tab').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  if(chart==='gap')charts();else chartsVol();
 }
 
 // ── Scroll reveal ──
