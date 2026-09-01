@@ -285,6 +285,7 @@ function setChartTier(chart,tier,btn){
 }
 var SAFE=.4, WARN=.55;
 var whRiskFilter='all';
+var whRegionFilter='all';
 
 try{D={
   "meta": {
@@ -4122,7 +4123,6 @@ function init(){
 }
 
 // ── 大区筛选（顶部） ──
-var whRegionFilter='all';
 function setRegionFilter(r,btn){
   whRegionFilter=r;
   document.querySelectorAll('#regionFilter .rfbtn').forEach(function(b){b.classList.remove('on');});
@@ -4284,7 +4284,7 @@ function renderFramework(){
     '<em>① 档位划分依据（按仓库旺季日均操作量）</em>：单量越大 → 需储备更多供应商、占比上限越严<br>'+
     '<em>② 日均操作量</em>：直接取自sheet1「旺季日均操作量」列（col2），该字段本身即为日均值；Ground仓库=7月日均操作量×旺季倍数(2.4倍)<br>'+
     '<em>③ 需求人数区间</em>：基于550w下单量各仓库需求人数推算（如S级仓需求>800人）；660w单量上涨后各仓人数同步放大，框架区间仍适用<br>'+
-    '<em>④ 单家占比上限设定</em>：S级 ≤20% | A级 ≤25% | B级 ≤35% | C级 ≤40% | D级 ≤50%<br>'+
+    '<em>④ 单家占比上限设定</em>：S级 ≤20% | A级 ≤25% | B级 ≤30% | C级 <40% | D级 <50%<br>'+
     '<em>⑤ 供应商数量要求</em> = max(最低家数, ceil(1 ÷ 单家占比上限))<br>'+
     '<em>⑥ 最少保证 2 家</em>（任何档位至少2家，防止单一供应商独家供给）<br>'+
     '<em>⑦ 每家占比需调整</em>：现有供应商家数不达标或单家占比超上限时，需新增供应商或调整配额<br>'+
