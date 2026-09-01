@@ -1060,16 +1060,21 @@ function buildRegionAnalysisBig(region, dd, regionData){
   const pPpl=prevChart?prevChart.daily_people||0:null, pSupp=prevChart?prevChart.total_suppliers||0:null;
   const pA=prevChart?prevChart.a_count||0:null, pD=prevChart?prevChart.d_count||0:null, pNc=prevChart?prevChart.noncompliant||0:null;
 
-  // 生成"大数字 + 右下角上月对比小字"卡片
+  // 生成"大数字 + 右下角上月对比小字"卡片（showPct=true 才显示百分比，仅日均人数）
   function bigCard(icon, label, value, prev, opts){
     const suffix=opts&&opts.suffix?opts.suffix:'';
+    const showPct=opts&&opts.showPct;
     let cmpTxt='';
     if(prev!==null&&prev!==undefined){
       const d=value-prev;
-      const pct=prev>0?Math.round(Math.abs(d)/prev*100):0;
       const arrow=d>0?'↑':(d<0?'↓':'→');
       const color=d===0?'#64748b':(d>0?'#dc2626':'#059669');
-      cmpTxt='<div style="font-size:9px;color:'+color+';font-weight:600;margin-top:2px;">'+prevName+' '+FM(prev)+' '+arrow+' '+FM(Math.abs(d))+suffix+' ('+pct+'%)</div>';
+      let txt=prevName+' '+FM(prev)+' '+arrow+' '+FM(Math.abs(d))+suffix;
+      if(showPct){
+        const pct=prev>0?Math.round(Math.abs(d)/prev*100):0;
+        txt+=' ('+pct+'%)';
+      }
+      cmpTxt='<div style="font-size:9px;color:'+color+';font-weight:600;margin-top:2px;">'+txt+'</div>';
     }else{
       cmpTxt='<div style="font-size:9px;color:#94a3b8;margin-top:2px;">无'+prevName+'对比</div>';
     }
@@ -1081,9 +1086,9 @@ function buildRegionAnalysisBig(region, dd, regionData){
   }
 
   let h='';
-  // 大数汇报网格（本月数据 + 右下角上月对比）
+  // 大数汇报网格（本月数据 + 右下角上月对比；仅日均人数显示百分比）
   h+='<div class="stat-cards" style="grid-template-columns:repeat(5,1fr);margin-bottom:8px;">';
-  h+=bigCard('👥','日均人数',totalPpl,pPpl,{suffix:'人',color:'#2563eb'});
+  h+=bigCard('👥','日均人数',totalPpl,pPpl,{suffix:'人',color:'#2563eb',showPct:true});
   h+=bigCard('🏢','供应商',totalSupp,pSupp,{color:'#2563eb'});
   h+=bigCard('🟢','A级',ac,pA,{color:'#059669'});
   h+=bigCard('🔴','D级',dc,pD,{color:'#dc2626'});
