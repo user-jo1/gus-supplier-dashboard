@@ -274,6 +274,15 @@ tr.wh-group td.action-cell{font-size:12px;line-height:1.5}
 
 <script>
 var D=null;
+// 柱状图档位切换（全部 / 550w / 660w）——必须在 init() 调用前初始化
+var chartTier={gap:'all',vol:'all'};
+function setChartTier(chart,tier,btn){
+  chartTier[chart]=tier;
+  var tabsId=chart==='gap'?'gapTabs':'volTabs';
+  document.querySelectorAll('#'+tabsId+' .tab').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  if(chart==='gap')charts();else chartsVol();
+}
 var SAFE=.4, WARN=.55;
 var whRiskFilter='all';
 
@@ -4619,16 +4628,6 @@ function chartsVol(){
   updateVolLabels();
   chartInst.options.animation.onComplete=updateVolLabels;
   chartInst.resize(updateVolLabels);
-}
-
-// ── 柱状图档位切换（全部 / 550w / 660w）──
-var chartTier={gap:'all',vol:'all'};
-function setChartTier(chart,tier,btn){
-  chartTier[chart]=tier;
-  var tabsId=chart==='gap'?'gapTabs':'volTabs';
-  document.querySelectorAll('#'+tabsId+' .tab').forEach(function(b){b.classList.remove('on');});
-  btn.classList.add('on');
-  if(chart==='gap')charts();else chartsVol();
 }
 
 // ── Scroll reveal ──
