@@ -32,7 +32,7 @@ REGION_MAP = {
     'MS': 'MS 中南大区', 'GL': 'GL 大湖大区', 'FL': 'FL 佛州大区',
     'Ground': 'Ground项目部',
 }
-WH_NAME_MAP = {'LAX.H': 'LAV.H', 'CNO.G': 'ONT.G'}
+WH_NAME_MAP = {'LAX.H': 'LAV.H', 'CNO.G': 'ONT.G', 'OG 美西区': 'ONT.G'}
 
 # ---- 读取 ----
 xls = pd.ExcelFile(INPUT_FILE)
@@ -70,25 +70,27 @@ def parse_peak():
 
         d550 = int(float(t550)) if pd.notna(t550) and str(t550).strip() not in ('-', '') else 0
         d660 = int(float(t660)) if pd.notna(t660) and str(t660).strip() not in ('-', '') else 0
+        # 550w下单量日均总操作=col2, 660w下单量日均总操作=col16（两档单量不同）
         vol = int(float(r[2])) if pd.notna(r[2]) and str(r[2]).strip() not in ('-', '') else 0
+        vol660 = int(float(r[16])) if pd.notna(r[16]) and str(r[16]).strip() not in ('-', '') else 0
         region_name = REGION_MAP.get(cur_region, cur_region)
 
         rows.append({
             '大区': region_name, '仓库': wh,
             '需求550w': d550, '需求660w': d660,
-            '操作量': vol,
+            '操作量': vol, '操作量660': vol660,
             '仓库类型': 'HUB',
         })
     return pd.DataFrame(rows)
 
 df_hub_peak = parse_peak()
 df_hub_peak = df_hub_peak.groupby(['大区', '仓库'], as_index=False).agg({
-    '需求550w': 'sum', '需求660w': 'sum', '操作量': 'sum', '仓库类型': 'first'
+    '需求550w': 'sum', '需求660w': 'sum', '操作量': 'sum', '操作量660': 'sum', '仓库类型': 'first'
 })
 
-# ---- Ground 7月在岗 + 货量 ----
+# ---- Ground 7月在岗 + 货量（先映射仓库名，含 OG 美西区→ONT.G 计件行） ----
+df_jul_manpower['仓库'] = df_jul_manpower['仓库'].replace(WH_NAME_MAP)
 df_g_mp = df_jul_manpower[df_jul_manpower['仓库'].str.endswith('.G', na=False)].copy()
-df_g_mp['仓库'] = df_g_mp['仓库'].replace(WH_NAME_MAP)
 g_total = df_g_mp.groupby(['大区', '仓库'])['实际使用人数（日均）'].sum().reset_index()
 g_total.columns = ['大区', '仓库', '7月总人数']
 
@@ -100,11 +102,13 @@ df_g_peak['需求550w'] = (df_g_peak['7月总人数'] * GROUND_MULTIPLIER_550).r
 df_g_peak['需求660w'] = (df_g_peak['7月总人数'] * GROUND_MULTIPLIER_660).round().astype(int)
 df_g_peak['操作量'] = (df_g_peak['仓库'].map(g_vol_map).fillna(0) * GROUND_MULTIPLIER_660).round().astype(int)
 df_g_peak['仓库类型'] = 'Ground'
+df_g_peak['操作量660'] = df_g_peak['操作量']  # Ground 无660拆分单量，沿用同一货量口径
 
 # ---- 合并所有仓库需求 ----
 df_all_demand = pd.concat([df_hub_peak, df_g_peak], ignore_index=True)
 df_all_demand['单量550w'] = df_all_demand['操作量']
-df_all_demand['单量660w'] = df_all_demand['操作量']
+# 660w下单量日均总操作 = col16（若缺失如 Ground，用 550w 单量同源）
+df_all_demand['单量660w'] = df_all_demand['操作量660'].fillna(df_all_demand['操作量'])
 
 # ---- 7月在岗（含未开仓库=0） ----
 df_mp_hub = df_jul_manpower[~df_jul_manpower['仓库'].str.endswith('.G', na=False)].copy()
@@ -177,8 +181,9 @@ def build_warehouse(demand_col, demand_label, vol_col):
         region = w['大区']
         demand = int(w[demand_col])
         vol = int(w[vol_col])
-        current = int(hub_total_map.get((region, wh), 0)) if w['仓库类型'] == 'HUB' else int(w['7月总人数'])
-        june_staff = int(JUNE_STAFF.get(wh, 0))
+        # 7月在岗=四舍五入（保证与汇总5491一致）
+        current = int(round(hub_total_map.get((region, wh), 0))) if w['仓库类型'] == 'HUB' else int(round(w['7月总人数']))
+        june_staff = int(round(JUNE_STAFF.get(wh, 0)))
         gap = demand - current
         tier_name, tier_desc, tier_range = volume_tier(vol) if vol > 0 else demand_to_volume_tier(demand)
         wh_rows.append({
@@ -203,9 +208,9 @@ def build_warehouse(demand_col, demand_label, vol_col):
         sup_rows.append({
             '大区': region, '仓库': wh, '供应商': s['供应商'],
             '6月在岗人数': june_sup,
-            '7月在岗人数': int(s['7月在岗人数']),
-            '人数变化': (int(s['7月在岗人数']) - june_sup) if june_sup is not None else None,
-            '仓库总人数': int(s['7月总人数']),
+            '7月在岗人数': int(round(s['7月在岗人数'])),
+            '人数变化': (int(round(s['7月在岗人数'])) - june_sup) if june_sup is not None else None,
+            '仓库总人数': int(round(s['7月总人数'])),
             '供给占比': round(s['供给占比'], 4),
             '风险等级': s['风险等级'],
             '需求人数': demand, '人力缺口': gap,
@@ -213,7 +218,7 @@ def build_warehouse(demand_col, demand_label, vol_col):
     df_sup = pd.DataFrame(sup_rows)
     return df_wh, df_sup
 
-df_wh_550, df_sup_550 = build_warehouse('需求550w', '550w', '单量550w')
+df_wh_550, df_sup_550 = build_warehouse('需求550w', '550w', '操作量')
 df_wh_660, df_sup_660 = build_warehouse('需求660w', '660w', '单量660w')
 
 # ---- 5档货量供应商配置标准框架 ----
@@ -221,9 +226,9 @@ def build_standard():
     tiers = [
         {'档位': 'S级(超大型)', '日均操作量区间': '>100万单/日', '需求人数': '>800人', '供应商家数': '5家及以上', '占比上限': '≤20%', '上限值': 0.20, '说明': '超高货量，需至少5家分散，单家≤20%'},
         {'档位': 'A级(大型)', '日均操作量区间': '50~100万单/日', '需求人数': '400~800人', '供应商家数': '4家及以上', '占比上限': '≤25%', '上限值': 0.25, '说明': '大货量，至少4家，单家≤25%'},
-        {'档位': 'B级(中型)', '日均操作量区间': '25~50万单/日', '需求人数': '250~400人', '供应商家数': '3家及以上', '占比上限': '≤35%', '上限值': 0.35, '说明': '中货量，至少3家，单家≤35%'},
-        {'档位': 'C级(中小型)', '日均操作量区间': '10~25万单/日', '需求人数': '100~250人', '供应商家数': '3家及以上', '占比上限': '≤40%', '上限值': 0.40, '说明': '中低货量，至少3家，单家≤40%'},
-        {'档位': 'D级(小型)', '日均操作量区间': '≤10万单/日', '需求人数': '≤100人', '供应商家数': '2家及以上', '占比上限': '≤50%', '上限值': 0.50, '说明': '低货量，最少保证2家，单家≤50%'},
+        {'档位': 'B级(中型)', '日均操作量区间': '25~50万单/日', '需求人数': '250~400人', '供应商家数': '3家及以上', '占比上限': '≤30%', '上限值': 0.30, '说明': '中货量，至少3家，单家≤30%'},
+        {'档位': 'C级(中小型)', '日均操作量区间': '10~25万单/日', '需求人数': '100~250人', '供应商家数': '3家及以上', '占比上限': '<40%', '上限值': 0.40, '说明': '中低货量，至少3家，单家<40%'},
+        {'档位': 'D级(小型)', '日均操作量区间': '≤10万单/日', '需求人数': '≤100人', '供应商家数': '2家及以上', '占比上限': '<50%', '上限值': 0.50, '说明': '低货量，最少保证2家，单家<50%'},
     ]
     return tiers
 
