@@ -956,6 +956,11 @@ function renderRegionContent(region){
     h+='<div style="width:210px;height:210px;flex-shrink:0;display:flex;align-items:center;justify-content:center;"><canvas id="radar-'+region.replace(/[^a-zA-Z]/g,'')+'-'+i+'"></canvas></div>';
     // Detail scores - fill remaining space
     h+='<div style="flex:1;min-width:0;">';
+    // 计时/计件构成（有计件时列出明细）
+    if((r['计件使用人数']||0)>0){
+      const _tm=r['计时使用人数']!=null?r['计时使用人数']:(r['日均使用人数']-(r['计件使用人数']||0));
+      h+='<div style="font-size:10px;color:#0d9488;font-weight:700;margin-bottom:4px;">👥 日均人数构成：计时 '+FM(_tm)+' 人 + 计件 '+FM(r['计件使用人数'])+' 人 = '+FM(r['日均使用人数'])+' 人</div>';
+    }
     h+='<div class="dg" style="grid-template-columns:1fr 1fr;">';
     h+='<div class="di"><span class="dn">报价竞争力</span><span class="dv'+(r['报价竞争力得分']>=60?' ok':'')+'">'+(r['报价竞争力_pct']||'?')+'%（'+r['报价竞争力得分']+'分）</span></div>';
     h+='<div class="di"><span class="dn">派遣满足率</span><span class="dv'+(r['派遣满足率得分']>=60?' ok':'')+'">'+(r['派遣满足率_pct']||'?')+'%（'+r['派遣满足率得分']+'分）</span></div>';
@@ -1045,7 +1050,11 @@ function bindMonthButtons(region){
 
 // ─── 大数汇报：本月大数字 + 上月对比小字 + 状态徽章（随月份变化）───
 function buildRegionAnalysisBig(region, dd, regionData){
-  const totalPpl=dd.reduce((s,r)=>s+r['日均使用人数'],0);
+  // 计时 / 计件 拆分（5月旧数据无计件字段则全部视为计时）
+  const tm=dd.reduce((s,r)=>s+(r['计时使用人数']!=null?r['计时使用人数']:r['日均使用人数']),0);
+  const pc=dd.reduce((s,r)=>s+(r['计件使用人数']||0),0);
+  const totalPpl=tm+pc;
+  const hasPiece=pc>0;
   const totalSupp=[...new Set(dd.map(r=>r['供应商']))].length;
   const ac=regionData?regionData.a_count:0, bc=regionData?regionData.b_count:0;
   const cc=regionData?regionData.c_count:0, dc=regionData?regionData.d_count:0;
@@ -1053,19 +1062,22 @@ function buildRegionAnalysisBig(region, dd, regionData){
   // 状态统计
   const stCount={};
   dd.forEach(r=>{const st=r['使用状态']||'启用';stCount[st]=(stCount[st]||0)+1;});
-  // 上月数据
+  // 上月数据（有计件大区不再显示6月涨跌，改为显示构成明细）
   let prevChart=null, prevName='上月';
   if(currentMonth==='2026年7月'){prevChart=(D.people_supplier_chart_jun||[]).find(r=>r.region===region);prevName='6月';}
   else if(currentMonth==='2026年6月'){prevChart=D.people_supplier_chart.find(r=>r.region===region);prevName='5月';}
-  const pPpl=prevChart?prevChart.daily_people||0:null, pSupp=prevChart?prevChart.total_suppliers||0:null;
+  const pPpl=hasPiece?null:(prevChart?prevChart.daily_people||0:null), pSupp=prevChart?prevChart.total_suppliers||0:null;
   const pA=prevChart?prevChart.a_count||0:null, pD=prevChart?prevChart.d_count||0:null, pNc=prevChart?prevChart.noncompliant||0:null;
 
-  // 生成"大数字 + 右下角上月对比小字"卡片（showPct=true 才显示百分比，仅日均人数）
+  // 生成"大数字 + 右下角小字"卡片
   function bigCard(icon, label, value, prev, opts){
     const suffix=opts&&opts.suffix?opts.suffix:'';
     const showPct=opts&&opts.showPct;
+    const pieceLine=opts&&opts.pieceLine; // 有计件时自定义注释（替代6月对比）
     let cmpTxt='';
-    if(prev!==null&&prev!==undefined){
+    if(pieceLine){
+      cmpTxt='<div style="font-size:9px;color:#0d9488;font-weight:700;margin-top:2px;">'+pieceLine+'</div>';
+    }else if(prev!==null&&prev!==undefined){
       const d=value-prev;
       const arrow=d>0?'↑':(d<0?'↓':'→');
       const color=d===0?'#64748b':(d>0?'#dc2626':'#059669');
@@ -1086,9 +1098,10 @@ function buildRegionAnalysisBig(region, dd, regionData){
   }
 
   let h='';
-  // 大数汇报网格（本月数据 + 右下角上月对比；仅日均人数显示百分比）
+  // 大数汇报网格：日均人数=计时+计件合计；有计件大区注释显示构成明细
   h+='<div class="stat-cards" style="grid-template-columns:repeat(5,1fr);margin-bottom:8px;">';
-  h+=bigCard('👥','日均人数',totalPpl,pPpl,{suffix:'人',color:'#2563eb',showPct:true});
+  const pieceLine=hasPiece?('计时 '+FM(tm)+'人 + 计件 '+FM(pc)+'人'):null;
+  h+=bigCard('👥','日均人数',totalPpl,pPpl,{suffix:'人',color:'#2563eb',pieceLine:pieceLine});
   h+=bigCard('🏢','供应商',totalSupp,pSupp,{color:'#2563eb'});
   h+=bigCard('🟢','A级',ac,pA,{color:'#059669'});
   h+=bigCard('🔴','D级',dc,pD,{color:'#dc2626'});
@@ -1195,22 +1208,47 @@ function buildRegionCards(region, dd, regionData){
   const ac=regionData?regionData.a_count:0, bc=regionData?regionData.b_count:0, cc=regionData?regionData.c_count:0, dc=regionData?regionData.d_count:0;
   const maxGrade=Math.max(ac,bc,cc,dc,1);
   let h='<div style="display:flex;gap:14px;margin-bottom:12px;">';
-  const whByWarehouse={};
-  dd.forEach(r=>{const w=r['仓库'];whByWarehouse[w]=(whByWarehouse[w]||0)+r['日均使用人数'];});
-  const whEntries=Object.entries(whByWarehouse).sort((a,b)=>b[1]-a[1]);
+  // 按仓库聚合：计时/计件分开，条形两段堆叠显示（有计件大区）
+  const whT={}, whP={};
+  dd.forEach(r=>{
+    const w=r['仓库'];
+    whT[w]=(whT[w]||0)+(r['计时使用人数']!=null?r['计时使用人数']:r['日均使用人数']);
+    whP[w]=(whP[w]||0)+(r['计件使用人数']||0);
+  });
+  const whTotal={};
+  Object.keys(whT).forEach(w=>{whTotal[w]=whT[w]+whP[w];});
+  const whEntries=Object.entries(whTotal).sort((a,b)=>b[1]-a[1]);
   const maxWh=Math.max(...whEntries.map(e=>e[1]),1);
   h+='<div style="flex:1;background:#fff;border:1px solid #e8ecf1;border-radius:10px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,0.04);">';
   h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
   h+='<div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;font-weight:600;">👤 各仓库日均人数</div>';
-  h+='<div style="font-size:22px;font-weight:800;color:#2563eb;line-height:1;">'+FM(totalPpl)+'<span style="font-size:10px;color:#94a3b8;font-weight:500;"> 人</span></div></div>';
-  const barColors=['#3b82f6','#6366f1','#8b5cf6','#a855f7','#06b6d4','#0ea5e9','#2563eb','#4f46e5','#7c3aed','#0891b2'];
-  whEntries.forEach(([w,v],i)=>{
-    const pct=Math.round(v/maxWh*100);
+  h+='<div style="text-align:right;"><div style="font-size:22px;font-weight:800;color:#2563eb;line-height:1;">'+FM(totalPpl)+'<span style="font-size:10px;color:#94a3b8;font-weight:500;"> 人</span></div></div></div>';
+  // 图例
+  const anyPiece=whEntries.some(e=>whP[e[0]]>0);
+  if(anyPiece){
+    h+='<div style="display:flex;gap:10px;margin-bottom:6px;font-size:9px;color:#94a3b8;">'
+      +'<span><i style="display:inline-block;width:10px;height:10px;background:#3b82f6;border-radius:2px;margin-right:3px;"></i>计时</span>'
+      +'<span><i style="display:inline-block;width:10px;height:10px;background:#f59e0b;border-radius:2px;margin-right:3px;"></i>计件</span>'
+      +'</div>';
+  }
+  whEntries.forEach(([w,v])=>{
+    const t=whT[w]||0, p=whP[w]||0;
+    const pctTotal=Math.round(v/maxWh*100);
+    const pctP=p>0?Math.round(p/v*100):0;
     h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
     h+='<span style="width:50px;font-size:9.5px;font-weight:600;color:#475569;text-align:right;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;">'+w+'</span>';
-    h+='<div style="flex:1;height:26px;background:#f1f5f9;border-radius:8px;overflow:hidden;">';
-    h+='<div style="width:'+pct+'%;height:100%;background:'+barColors[i%barColors.length]+';border-radius:8px;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;transition:width .4s ease;min-width:fit-content;">';
-    h+='<span style="font-size:10px;color:#fff;font-weight:700;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,0.15);">'+FM(v)+'人</span></div></div></div>';
+    h+='<div style="flex:1;height:26px;background:#f1f5f9;border-radius:8px;overflow:hidden;display:flex;">';
+    if(p>0){
+      // 计件段（上方/靠右使用橙色），计时段（蓝色）
+      h+='<div title="计时 '+FM(t)+'人" style="width:'+(pctTotal*(100-pctP)/100)+'%;height:100%;background:#3b82f6;transition:width .4s ease;"></div>';
+      h+='<div title="计件 '+FM(p)+'人" style="width:'+(pctTotal*pctP/100)+'%;height:100%;background:#f59e0b;transition:width .4s ease;"></div>';
+    }else{
+      h+='<div style="width:'+pctTotal+'%;height:100%;background:#3b82f6;border-radius:8px;transition:width .4s ease;"></div>';
+    }
+    h+='</div>';
+    h+='<span style="font-size:10px;font-weight:700;color:#2563eb;min-width:40px;text-align:right;white-space:nowrap;">'+FM(v)+'人</span>';
+    if(p>0)h+='<span style="font-size:8.5px;color:#f59e0b;min-width:52px;text-align:right;white-space:nowrap;">计'+FM(p)+'</span>';
+    h+='</div>';
   });
   h+='</div>';
   h+='<div style="flex:1;background:#fff;border:1px solid #e8ecf1;border-radius:10px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,0.04);">';
@@ -1312,6 +1350,11 @@ function renderRegionTableRows(region, data, startIdx){
     rows+='<div style="display:flex;gap:16px;align-items:center;padding:10px 10px;">';
     rows+='<div style="width:210px;height:210px;flex-shrink:0;display:flex;align-items:center;justify-content:center;"><canvas id="radar-'+region.replace(/[^a-zA-Z]/g,'')+'-'+actualIdx+'"></canvas></div>';
     rows+='<div style="flex:1;min-width:0;">';
+    // 计时/计件构成（有计件时列出明细）
+    if((r['计件使用人数']||0)>0){
+      const _tm=r['计时使用人数']!=null?r['计时使用人数']:(r['日均使用人数']-(r['计件使用人数']||0));
+      rows+='<div style="font-size:10px;color:#0d9488;font-weight:700;margin-bottom:4px;">👥 日均人数构成：计时 '+FM(_tm)+' 人 + 计件 '+FM(r['计件使用人数'])+' 人 = '+FM(r['日均使用人数'])+' 人</div>';
+    }
     rows+='<div class="dg" style="grid-template-columns:1fr 1fr;">';
     rows+='<div class="di"><span class="dn">报价竞争力</span><span class="dv'+(r['报价竞争力得分']>=60?' ok':'')+'">'+(r['报价竞争力_pct']||'?')+'%（'+r['报价竞争力得分']+'分）</span></div>';
     rows+='<div class="di"><span class="dn">派遣满足率</span><span class="dv'+(r['派遣满足率得分']>=60?' ok':'')+'">'+(r['派遣满足率_pct']||'?')+'%（'+r['派遣满足率得分']+'分）</span></div>';
