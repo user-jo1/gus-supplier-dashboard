@@ -36,6 +36,9 @@ regions = ['FL 佛州大区', 'GL 大湖大区', 'MS 中南大区', 'NE 东北�
 print('--- 追加7月数据（5月/6月不修改） ---')
 df_jul = pd.read_excel(jul_xlsx, sheet_name='数据收集表')
 df_jul = df_jul[df_jul['月份'] == '2026年 7月'].copy()
+# 列结构变化：'实际使用人数（日均）' 已拆为 '计时使用人数（日均）'+'计件使用人数（日均）'（兼容两种表头）
+if '实际使用人数（日均）' not in df_jul.columns:
+    df_jul['实际使用人数（日均）'] = df_jul['计时使用人数（日均）'].fillna(0) + df_jul['计件使用人数（日均）'].fillna(0)
 # 仓库改名：CNO.G → ONT.G（历史5月/6月数据同步替换，保持跨月对比一致）
 for col in ['仓库']:
     df_jul[col] = df_jul[col].replace({'CNO.G': 'ONT.G'})

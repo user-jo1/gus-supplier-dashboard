@@ -928,7 +928,7 @@ function renderRegionContent(region){
   h+='<div id="regionCards">';
   h+=buildRegionCards(region, dd, regionData);
   h+='</div>';
-  h+='<div class="table-card"><div class="table-wrap" style="max-height:520px;"><table style="width:100%;"><thead><tr><th>评级</th><th>合规</th><th>仓库</th><th>供应商</th><th>状态</th><th>日均人数</th><th>计时分拣工时薪</th><th>Markup</th><th>结算价</th><th>总分</th><th></th></tr></thead><tbody id="regionTableBody">';
+  h+='<div class="table-card"><div class="table-wrap" style="max-height:520px;"><table style="width:100%;"><thead><tr><th>评级</th><th>合规</th><th>仓库</th><th>供应商</th><th>状态</th><th>日均人数<br><span style="font-weight:400;color:#94a3b8;font-size:10px;">计时+计件</span></th><th>计时分拣工时薪</th><th>Markup</th><th>结算价</th><th>总分</th><th></th></tr></thead><tbody id="regionTableBody">';
   // 按总分降序（7月停用沉底）
   dd=sortByMonth(dd,currentMonth);
   dd.forEach((r,i)=>{
@@ -947,7 +947,12 @@ function renderRegionContent(region){
     else h+='<td></td>';
     const wage=r['分拣工时薪']||0;
     const settle=r['分拣工结算价']||0;
-    h+='<td style="text-align:center;">'+FM(r['日均使用人数'])+'</td><td style="text-align:center;">$'+(typeof wage==='number'?wage.toFixed(1):wage)+'</td>';
+    // 日均人数列：计时+计件（有计件时显示"3+116"形式）
+    const _tmCell=r['计时使用人数']!=null?r['计时使用人数']:null;
+    const _pcCell=r['计件使用人数']||0;
+    let _pplCell=FM(r['日均使用人数']);
+    if(_pcCell>0 && _tmCell!=null) _pplCell=FM(_tmCell)+'+'+FM(_pcCell);
+    h+='<td style="text-align:center;">'+_pplCell+'</td><td style="text-align:center;">$'+(typeof wage==='number'?wage.toFixed(1):wage)+'</td>';
     h+='<td style="text-align:center;">'+r['markup']+'%</td><td style="text-align:center;">$'+(typeof settle==='number'?settle.toFixed(2):settle)+'</td>';
     h+='<td style="text-align:center;" class="'+sc+'"><strong>'+r['总分']+'</strong></td><td style="color:#2563eb;font-size:10px;text-align:center;">▸</td></tr>';
     h+='<tr class="det" id="'+rowId+'" style="display:none;"><td colspan="12" style="background:#fafbfc;padding:0;border-top:1px solid #e8ecf1;">';
@@ -956,11 +961,6 @@ function renderRegionContent(region){
     h+='<div style="width:210px;height:210px;flex-shrink:0;display:flex;align-items:center;justify-content:center;"><canvas id="radar-'+region.replace(/[^a-zA-Z]/g,'')+'-'+i+'"></canvas></div>';
     // Detail scores - fill remaining space
     h+='<div style="flex:1;min-width:0;">';
-    // 计时/计件构成（有计件时列出明细）
-    if((r['计件使用人数']||0)>0){
-      const _tm=r['计时使用人数']!=null?r['计时使用人数']:(r['日均使用人数']-(r['计件使用人数']||0));
-      h+='<div style="font-size:10px;color:#0d9488;font-weight:700;margin-bottom:4px;">👥 日均人数构成：计时 '+FM(_tm)+' 人 + 计件 '+FM(r['计件使用人数'])+' 人 = '+FM(r['日均使用人数'])+' 人</div>';
-    }
     h+='<div class="dg" style="grid-template-columns:1fr 1fr;">';
     h+='<div class="di"><span class="dn">报价竞争力</span><span class="dv'+(r['报价竞争力得分']>=60?' ok':'')+'">'+(r['报价竞争力_pct']||'?')+'%（'+r['报价竞争力得分']+'分）</span></div>';
     h+='<div class="di"><span class="dn">派遣满足率</span><span class="dv'+(r['派遣满足率得分']>=60?' ok':'')+'">'+(r['派遣满足率_pct']||'?')+'%（'+r['派遣满足率得分']+'分）</span></div>';
@@ -1275,28 +1275,46 @@ function renderRegionTrendCharts(region){
   const junDD=(D.detail_by_region_jun||{})[region]||[];
   const julDD=(D.detail_by_region_jul||{})[region]||[];
 
-  // ── 仓库人数柱状图：横轴=仓库，分组=5月/6月/7月 ──
+  // ── 仓库人数柱状图：横轴=仓库，按月份分组（每月计时+计件堆叠）──
   const allWH=[...new Set([...mayDD.map(r=>r['仓库']),...junDD.map(r=>r['仓库']),...julDD.map(r=>r['仓库'])])].sort();
-  const mayWH={}, junWH={}, julWH={};
-  mayDD.forEach(r=>{mayWH[r['仓库']]=(mayWH[r['仓库']]||0)+r['日均使用人数'];});
-  junDD.forEach(r=>{junWH[r['仓库']]=(junWH[r['仓库']]||0)+r['日均使用人数'];});
-  julDD.forEach(r=>{julWH[r['仓库']]=(julWH[r['仓库']]||0)+r['日均使用人数'];});
+  // 计时/计件按仓库聚合（5月无计时/计件字段，5月全部按"日均使用人数"算计时，计件=0）
+  const sumByKey=(rows,k)=>{const m={};rows.forEach(r=>{m[r['仓库']]=(m[r['仓库']]||0)+(r[k]||0);});return m;};
+  const mayT=sumByKey(mayDD,'日均使用人数'), mayP=sumByKey(mayDD,'计件使用人数');
+  const junT=sumByKey(junDD,'计时使用人数'), junP=sumByKey(junDD,'计件使用人数');
+  const julT=sumByKey(julDD,'计时使用人数'), julP=sumByKey(julDD,'计件使用人数');
 
   const ctx1=document.getElementById('chWhTrend');
   if(ctx1&&ctx1.clientWidth>0){
     if(whTrendInst)whTrendInst.destroy();
+    var dataAll=[allWH.map(w=>mayT[w]||0),allWH.map(w=>mayP[w]||0),allWH.map(w=>junT[w]||0),allWH.map(w=>junP[w]||0),allWH.map(w=>julT[w]||0),allWH.map(w=>julP[w]||0)];
+    // 圆角仅出现在每根柱可见顶部：按 stack 分组，从顶向下第一个非零段获得圆角
+    function stackTopRadius(c){
+      var stackMap=[[0,1],[2,3],[4,5]];
+      var grp=null;
+      for(var g=0;g<stackMap.length;g++){if(stackMap[g].indexOf(c.datasetIndex)>-1){grp=stackMap[g];break;}}
+      if(!grp)return 0;
+      var arr=[grp[1],grp[0]];
+      for(var i=0;i<arr.length;i++){
+        var idx=arr[i];
+        if((dataAll[idx][c.dataIndex]||0)>0)return idx===c.datasetIndex?4:0;
+      }
+      return 0;
+    }
     whTrendInst=new Chart(ctx1,{type:'bar',data:{
       labels:allWH,
       datasets:[
-        {label:'5月',data:allWH.map(w=>mayWH[w]||0),backgroundColor:'#93c5fd',barPercentage:.7,borderRadius:{topLeft:3,topRight:3}},
-        {label:'6月',data:allWH.map(w=>junWH[w]||0),backgroundColor:'#3b82f6',barPercentage:.7,borderRadius:{topLeft:3,topRight:3}},
-        {label:'7月',data:allWH.map(w=>julWH[w]||0),backgroundColor:'#8b5cf6',barPercentage:.7,borderRadius:{topLeft:3,topRight:3}}
+        {label:'5月·计时',data:dataAll[0],backgroundColor:'#93c5fd',stack:'s5',categoryPercentage:.72,barPercentage:.88,borderSkipped:false,borderRadius:stackTopRadius},
+        {label:'5月·计件',data:dataAll[1],backgroundColor:'rgba(147,197,253,.45)',stack:'s5',categoryPercentage:.72,barPercentage:.88,borderSkipped:false,borderRadius:stackTopRadius},
+        {label:'6月·计时',data:dataAll[2],backgroundColor:'#3b82f6',stack:'s6',categoryPercentage:.72,barPercentage:.88,borderSkipped:false,borderRadius:stackTopRadius},
+        {label:'6月·计件',data:dataAll[3],backgroundColor:'#fbbf24',stack:'s6',categoryPercentage:.72,barPercentage:.88,borderSkipped:false,borderRadius:stackTopRadius},
+        {label:'7月·计时',data:dataAll[4],backgroundColor:'#2563eb',stack:'s7',categoryPercentage:.72,barPercentage:.88,borderSkipped:false,borderRadius:stackTopRadius},
+        {label:'7月·计件',data:dataAll[5],backgroundColor:'#f59e0b',stack:'s7',categoryPercentage:.72,barPercentage:.88,borderSkipped:false,borderRadius:stackTopRadius}
       ]},options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{position:'bottom',labels:{font:{size:9},padding:10,usePointStyle:true,pointStyleWidth:8,boxWidth:8}},
-        tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': '+FM(ctx.raw)+'人'}}},
-        datalabels:{anchor:'end',align:'top',font:{size:9,weight:'600'},color:'#475569',clamp:true,offset:2,formatter:function(v){return FM(v)}}},
-      scales:{y:{grid:{color:'#f3f4f6'},ticks:{callback:v=>FM(v),font:{size:9}},title:{display:true,text:'日均人数',font:{size:9}},grace:'18%'},
-              x:{ticks:{font:{size:9}}}}}});
+        tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': '+FM(ctx.raw)+'人';},footer:function(items){var tot={};items.forEach(function(i){var m=i.dataset.label.split('·')[0];tot[m]=(tot[m]||0)+i.raw;});return Object.keys(tot).map(function(k){return k+'合计: '+FM(tot[k])+'人';}).join(' | ');}}},
+        datalabels:{anchor:'end',align:'top',font:{size:9,weight:'600'},color:'#475569',clamp:true,offset:2,formatter:function(v){return v>0?FM(v):''}}},
+      scales:{y:{stacked:true,grid:{color:'#f3f4f6'},ticks:{callback:v=>FM(v),font:{size:9}},title:{display:true,text:'日均人数',font:{size:9}},grace:'18%'},
+              x:{stacked:false,ticks:{font:{size:9}}}}}});
   }
 
   // ── ABCD等级柱状图：横轴=等级，分组=5月/6月/7月 ──
@@ -1343,18 +1361,18 @@ function renderRegionTableRows(region, data, startIdx){
     else rows+='<td></td>';
     const wage=r['分拣工时薪']||0;
     const settle=r['分拣工结算价']||0;
-    rows+='<td style="text-align:center;">'+FM(r['日均使用人数'])+'</td><td style="text-align:center;">$'+(typeof wage==='number'?wage.toFixed(1):wage)+'</td>';
+    // 日均人数列：计时+计件（有计件时显示"3+116"形式）
+    const _tmR=r['计时使用人数']!=null?r['计时使用人数']:null;
+    const _pcR=r['计件使用人数']||0;
+    let _pplR=FM(r['日均使用人数']);
+    if(_pcR>0 && _tmR!=null) _pplR=FM(_tmR)+'+'+FM(_pcR);
+    rows+='<td style="text-align:center;">'+_pplR+'</td><td style="text-align:center;">$'+(typeof wage==='number'?wage.toFixed(1):wage)+'</td>';
     rows+='<td style="text-align:center;">'+r['markup']+'%</td><td style="text-align:center;">$'+(typeof settle==='number'?settle.toFixed(2):settle)+'</td>';
     rows+='<td style="text-align:center;" class="'+sc+'"><strong>'+r['总分']+'</strong></td><td style="color:#2563eb;font-size:10px;text-align:center;">▸</td></tr>';
     rows+='<tr class="det" id="'+rowId+'" style="display:none;"><td colspan="12" style="background:#fafbfc;padding:0;border-top:1px solid #e8ecf1;">';
     rows+='<div style="display:flex;gap:16px;align-items:center;padding:10px 10px;">';
     rows+='<div style="width:210px;height:210px;flex-shrink:0;display:flex;align-items:center;justify-content:center;"><canvas id="radar-'+region.replace(/[^a-zA-Z]/g,'')+'-'+actualIdx+'"></canvas></div>';
     rows+='<div style="flex:1;min-width:0;">';
-    // 计时/计件构成（有计件时列出明细）
-    if((r['计件使用人数']||0)>0){
-      const _tm=r['计时使用人数']!=null?r['计时使用人数']:(r['日均使用人数']-(r['计件使用人数']||0));
-      rows+='<div style="font-size:10px;color:#0d9488;font-weight:700;margin-bottom:4px;">👥 日均人数构成：计时 '+FM(_tm)+' 人 + 计件 '+FM(r['计件使用人数'])+' 人 = '+FM(r['日均使用人数'])+' 人</div>';
-    }
     rows+='<div class="dg" style="grid-template-columns:1fr 1fr;">';
     rows+='<div class="di"><span class="dn">报价竞争力</span><span class="dv'+(r['报价竞争力得分']>=60?' ok':'')+'">'+(r['报价竞争力_pct']||'?')+'%（'+r['报价竞争力得分']+'分）</span></div>';
     rows+='<div class="di"><span class="dn">派遣满足率</span><span class="dv'+(r['派遣满足率得分']>=60?' ok':'')+'">'+(r['派遣满足率_pct']||'?')+'%（'+r['派遣满足率得分']+'分）</span></div>';
